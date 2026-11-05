@@ -1,0 +1,263 @@
+# Local development stack. Not used in CI/CD.
+#
+#   cp .env.example .env
+#   docker compose up -d --build           # infra + migrate + api + worker
+#   docker compose --profile dev run --rm seed   # demo data, once
+#   docker compose down                    # stop (add -v to wipe data)
+#
+# App settings come from .env; the environment: blocks below only override
+# what must differ inside the compose network (service names, not localhost).
+# Infra ports bind to 127.0.0.1 only, on the same host ports .env uses, so
+# `go run ./cmd/app` on the host keeps working against this stack.
+
+name: iblog
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://blog:blog@postgres:5432/blog?sslmode=disable
+  REDIS_URL: redis://redis:6379/0
+  MQTT_URL: tcp://emqx:1883
+  EMQX_API_URL: http://emqx:18083
+  EMQX_API_KEY: ${EMQX_API_KEY:-iblog-api}
+  EMQX_API_SECRET: ${EMQX_API_SECRET:-dev-emqx-api-secret-change-me-0123456789}
+  S3_ENDPOINT: minio:9000
+  SMTP_ADDR: mailpit:1025
+  MIGRATE_ON_START: "false" # the migrate service owns schema changes
+
+x-app: &app
+  env_file: .env
+  restart: unless-stopped
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+    minio:
+      condition: service_healthy
+    emqx:
+      condition: service_healthy
+
+services:
+  # ---------- infra ----------
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: blog
+      POSTGRES_PASSWORD: blog
+      POSTGRES_DB: blog
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blog -d blog"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: cgr.dev/chainguard/minio@sha256:3c60a2a8c4d33409a9bc7a623a7fcbfb4605adc3d89422d2f53b3f673a6e5597 # upstream stopped publishing minio/minio; digest pinned so rollbacks are reproducible
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001" # web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # MQTT broker of the diagram realtime channels (docs/MQTT.md). Browsers reach its WebSocket listener (8083, path
+  # /mqtt) through the site's own proxy (Web's nginx / vite); the API reaches the TCP listener (1883). Only
+  # loopback ports are published, for `go run ./cmd/app` and vite on the host; the dashboard is switched off.
+  # EMQX asks the API who may connect and what they may use (/api/internal/mqtt/*), with MQTT_INTERNAL_SECRET.
+  emqx:
+    image: emqx/emqx:5.8.6
+    configs:
+      - source: emqx_conf
+        target: /opt/emqx/etc/emqx.conf
+      - source: emqx_api_keys
+        target: /opt/emqx/etc/api_keys
+    ports:
+      - "127.0.0.1:1883:1883"
+      - "127.0.0.1:8083:8083"
+    volumes:
+      - emqxdata:/opt/emqx/data
+    healthcheck:
+      test: ["CMD", "emqx", "ctl", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - "127.0.0.1:8025:8025" # web UI; SMTP 1025 stays on the compose network
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------- app ----------
+  # One-shot: app + Guard schema and access seed, then exits 0.
+  migrate:
+    build:
+      context: .
+      target: migrate
+    image: iblog-migrate:dev
+    env_file: .env
+    environment: *app-env
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    build:
+      context: .
+      target: api
+    image: iblog-api:dev
+    environment:
+      <<: *app-env
+      WORKER: "false" # jobs run in the worker service
+    ports:
+      - "127.0.0.1:${PORT:-8080}:${PORT:-8080}"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+
+  worker:
+    <<: *app
+    build:
+      context: .
+      target: worker
+    image: iblog-worker:dev
+    environment:
+      <<: *app-env
+      METRICS_ADDR: ":9090" # worker -healthcheck needs this listener
+
+  # Dev-only demo data from the iblog-seed repo (../../seed). Not started by
+  # `up`; run it once:
+  #   docker compose --profile dev run --rm seed
+  seed:
+    profiles: ["dev"]
+    build:
+      context: ../../seed
+    image: iblog-seed:dev
+    env_file: .env
+    environment:
+      SEED_API: http://api:${PORT:-8080}
+      SEED_DATABASE_URL: postgres://blog:blog@postgres:5432/blog?sslmode=disable
+      SEED_REDIS_URL: redis://redis:6379/0
+    restart: "no"
+    depends_on:
+      api:
+        condition: service_healthy
+
+# EMQX settings (mounted as emqx.conf). Compose fills in the ${...} it knows; $${...} are EMQX's own placeholders.
+configs:
+  emqx_api_keys:
+    content: |
+      ${EMQX_API_KEY:-iblog-api}:${EMQX_API_SECRET:-dev-emqx-api-secret-change-me-0123456789}:administrator
+  emqx_conf:
+    content: |
+      # this file replaces the image's emqx.conf, so the node block it carried must be repeated here
+      node {
+        name = "emqx@127.0.0.1"
+        cookie = "${EMQX_NODE_COOKIE:-emqx-dev-cookie-change-me}"
+        data_dir = "data"
+      }
+      cluster.discovery_strategy = manual
+
+      listeners.tcp.default {
+        bind = "0.0.0.0:1883"
+        max_connections = 100000
+      }
+      listeners.ws.default {
+        bind = "0.0.0.0:8083"
+        max_connections = 100000
+        websocket { mqtt_path = "/mqtt" }
+      }
+      listeners.ssl.default { enable = false }
+      listeners.wss.default { enable = false }
+      # REST API only, for the API to kick revoked clients; the port is not published to the host
+      dashboard.listeners.http.bind = 18083
+      api_key.bootstrap_file = "/opt/emqx/etc/api_keys"
+
+      mqtt {
+        max_packet_size = "16MB"   # a compacted Yjs snapshot is one message (DIAGRAM_MAX_PROJECT_MB + 1 MiB at most)
+        max_topic_levels = 8
+        max_clientid_len = 128
+        retain_available = true
+        shared_subscription = true
+        max_inflight = 64
+        session_expiry_interval = "2h"
+      }
+
+      authentication = [
+        {
+          mechanism = password_based
+          backend = http
+          method = post
+          url = "${MQTT_AUTH_BASE:-http://api:${PORT:-8080}}/api/internal/mqtt/auth"
+          headers { "content-type" = "application/json", authorization = "Bearer ${MQTT_INTERNAL_SECRET:-dev-mqtt-internal-secret-change-me-0123456789}" }
+          body { clientid = "$${clientid}", username = "$${username}", password = "$${password}" }
+          pool_size = 8
+          connect_timeout = "5s"
+          request_timeout = "5s"
+        }
+      ]
+
+      authorization {
+        no_match = deny
+        deny_action = ignore
+        cache { enable = true, max_size = 64, ttl = "30s" }
+        sources = [
+          {
+            type = http
+            enable = true
+            method = post
+            url = "${MQTT_AUTH_BASE:-http://api:${PORT:-8080}}/api/internal/mqtt/acl"
+            headers { "content-type" = "application/json", authorization = "Bearer ${MQTT_INTERNAL_SECRET:-dev-mqtt-internal-secret-change-me-0123456789}" }
+            body { clientid = "$${clientid}", username = "$${username}", action = "$${action}", topic = "$${topic}" }
+            pool_size = 8
+            connect_timeout = "5s"
+            request_timeout = "5s"
+          }
+        ]
+      }
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  emqxdata:

@@ -1,0 +1,29 @@
+# Secrets: never in the build context.
+.env
+.env.*
+*.env
+
+# VCS, CI, editors, OS junk
+.git
+.github
+.gitignore
+.idea
+.vscode
+**/.DS_Store
+
+# Container and build tooling (changing them must not bust the COPY . . layer)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+Makefile
+spector.yaml
+
+# Docs and licence
+README.md
+LICENSE
+
+# Tests and their output (tests run in CI, outside Docker)
+**/*_test.go
+**/testdata
+**/*.out
+**/*.log
