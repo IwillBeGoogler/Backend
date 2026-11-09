@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/bakhod1r/errorx"
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/relation"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/importer"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/relation"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/importer"
 )
 
 func TestToProblem(t *testing.T) {

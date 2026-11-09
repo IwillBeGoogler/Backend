@@ -3,10 +3,10 @@ package application
 import (
 	"context"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/publication"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/publication"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 // requireWriter checks that actor may post into publicationID (0 = personal

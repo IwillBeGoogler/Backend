@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/sddfile"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/sddfile"
 )
 
 var sddPNG = append([]byte("\x89PNG\r\n\x1a\n"), bytes.Repeat([]byte{3}, 64)...)

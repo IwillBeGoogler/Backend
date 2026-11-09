@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 // Yjs state of live-edited files (diagram.YRepository). Updates are opaque

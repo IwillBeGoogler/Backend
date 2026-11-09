@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/clienterror"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/clienterror"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

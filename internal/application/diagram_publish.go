@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 // Publishing a diagram file to the blog: the owner of the project picks

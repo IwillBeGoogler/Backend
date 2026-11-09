@@ -2,7 +2,7 @@
 
 Medium-style blogging API. Go 1.26, DDD layout, PostgreSQL (pgx) + goose migrations, Redis (cache, rate limits, views, queue, pub/sub), MinIO for uploads, [Guard](https://github.com/bakhod1r/guard) for accounts, sessions, RBAC/ABAC and audit.
 
-Frontends: [client-react](https://github.com/iBlog/iblog-client-react), [admin-react](https://github.com/iBlog/iblog-admin-react).
+Frontends: [client-react](https://github.com/IWillBeGoogler/iwillbegoogler-client-react), [admin-react](https://github.com/IWillBeGoogler/iwillbegoogler-admin-react).
 
 ## Run
 
@@ -33,14 +33,14 @@ Loaded with [oneenv](https://github.com/bakhod1r/oneenv) from `.env` (optional, 
 | `SMTP_ADDR` | — | SMTP host:port; empty keeps mail in memory |
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | — | SMTP AUTH (PLAIN); password is a secret (`SMTP_PASSWORD_FILE` works). Requires `SMTP_TLS=starttls` or `tls`; startup fails otherwise. A postfix relay is no longer required |
 | `SMTP_TLS` | `none` | `none` (plain, Mailpit; upgrades if STARTTLS is offered), `starttls` (required, port 587), `tls` (implicit, port 465) |
-| `MAIL_FROM` | `no-reply@iblog.local` | |
+| `MAIL_FROM` | `no-reply@iwillbegoogler.local` | |
 | `SITE_URL` | `http://localhost:8081` | client site, for links in email, RSS and sitemap |
 | `REQUIRE_VERIFIED_EMAIL` | `true` | block posting, commenting and new publications until the email is confirmed |
 | `IMPORT_ALLOW_PRIVATE` | `false` | let story import fetch private/loopback addresses (tests only, never in production) |
 | `PASSWORD_HASH_MEMORY_KIB`, `PASSWORD_HASH_TIME`, `PASSWORD_HASH_THREADS` | `65536`, `3`, `2` | argon2id parameters (Guard); minimum `19456`, `2`, `1`. Changing them rehashes each password on its next login, so don't change them casually in production |
 | `AUDIT_EMAIL_KEY` | — | hex, ≥ 32 bytes (`openssl rand -hex 32`). Audit events then store a keyed `email_hmac` instead of an unkeyed `email_sha256`. Applies to audit events only. Startup fails on an invalid key and warns when it is empty |
 | `MFA_KEY` | `dev-mfa-key-change-me` | encrypts two-factor secrets; **change in production** (changing it later breaks existing 2FA setups) |
-| `SITE_NAME` | `iBlog` | product name in RSS and prerendered pages |
+| `SITE_NAME` | `IWillBeGoogler` | product name in RSS and prerendered pages |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET` | — | Cloudflare Turnstile CAPTCHA on signup (set both or neither); the site key reaches the client via `GET /api/config`. Signup also has a honeypot field |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | — | social login; a provider is on only when both of its values are set. Create a Google OAuth client (Web application) with redirect URI `PUBLIC_URL/api/auth/oauth/google/callback`, and a GitHub OAuth App with callback URL `PUBLIC_URL/api/auth/oauth/github/callback`. `GOOGLE_ISSUER`, `GITHUB_AUTH_URL`, `GITHUB_TOKEN_URL`, `GITHUB_API_URL` exist only to point tests at fakes |
 | `ANALYTICS` | `true` | product analytics: `POST /api/events` (page_view, read_time, signup_open; signup and publish are recorded server-side), `GET /api/admin/analytics` (DAU/WAU/MAU, funnel, D1/D7/D30 retention, read time). No IP or user agent stored; events kept 400 days |
@@ -58,7 +58,7 @@ Loaded with [oneenv](https://github.com/bakhod1r/oneenv) from `.env` (optional, 
 | `TRUST_PROXY` | `false` | read client IP from `X-Real-IP` |
 | `WORKER` | `true` | run background jobs (email, thumbnails, scheduled posts, purges) in this process |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | enables OpenTelemetry traces, metrics and logs (OTLP/HTTP); compose points it at Grafana LGTM (`http://localhost:3000`) |
-| `OTEL_SERVICE_NAME` | `iblog-api` | service name on all telemetry |
+| `OTEL_SERVICE_NAME` | `iwillbegoogler-api` | service name on all telemetry |
 | `OTEL_TRACES_SAMPLER_ARG` | `1.0` | share of new traces sampled (parent-based); Redis calls outside a request/job are not traced |
 | `DOCS_DIR`, `DOCS_KEY`, `DOCS_PRODUCTION`, `PUBLIC_URL` | `.`, —, `false`, `http://localhost:8080` | Spector console |
 

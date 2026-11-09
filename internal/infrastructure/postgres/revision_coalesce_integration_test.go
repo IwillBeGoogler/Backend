@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/postgres"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/postgres"
 )
 
 // Editor autosave saves a draft every few seconds: those saves share one revision, but publishing a draft

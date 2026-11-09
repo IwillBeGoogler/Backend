@@ -11,7 +11,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 )
 
 // Role is what a user may do in a project (or, with a per-file override, in

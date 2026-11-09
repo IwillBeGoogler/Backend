@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 // The audit trail of MCP tool calls: who called which tool on what, how it

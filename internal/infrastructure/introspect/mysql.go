@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 const (

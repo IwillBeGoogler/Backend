@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/feedback"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/feedback"
 )
 
 // createFeedback stores a bug report or idea.

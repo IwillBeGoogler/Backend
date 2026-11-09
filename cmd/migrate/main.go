@@ -27,11 +27,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/config"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/guardauth"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/postgres"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/redis"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/telemetry"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/guardauth"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/postgres"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/redis"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/telemetry"
 )
 
 // Set at build time: -ldflags "-X main.version=... -X main.commit=..." (Dockerfile, CI).

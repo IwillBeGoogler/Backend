@@ -16,10 +16,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/yjs"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/diagramhub"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/yjs"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/diagramhub"
 )
 
 func (h *Handler) realtimeRoutes(mux dgRouter) {

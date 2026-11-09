@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/diagramhub"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/diagramhub"
 	"go.uber.org/zap"
 )
 

@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/clienterror"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/clienterror"
 )
 
 // ReportClientError stores one JavaScript error from the web app. Anyone may

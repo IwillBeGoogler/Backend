@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/postgres"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/postgres"
 )
 
 // pgStore writes into the blog's Postgres.

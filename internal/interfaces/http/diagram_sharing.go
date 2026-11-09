@@ -15,9 +15,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/http/middleware"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 )
 
 func (h *Handler) sharingRoutes(mux dgRouter) {

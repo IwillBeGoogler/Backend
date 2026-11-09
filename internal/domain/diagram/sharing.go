@@ -15,7 +15,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 )
 
 // PrefixShare is the id prefix of a share link ("shr_" + 16 hex chars).

@@ -13,7 +13,7 @@ import (
 // Guard's migrations take their own lock (migrations.LockID), but the seed
 // is a read-then-insert on unique policy names, so replicas starting
 // together must not run it at once.
-const setupLockID int64 = 0x69626c6f675f7367 // "iblog_sg"
+const setupLockID int64 = 0x69626c6f675f7367 // "iwillbegoogler_sg"
 
 // Migrate applies Guard's migrations and seeds the blog's access rules, then
 // closes Guard. Run it after postgres.Migrate: Guard references the users

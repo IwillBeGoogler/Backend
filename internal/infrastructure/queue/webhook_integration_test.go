@@ -16,11 +16,11 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/diagramtest"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/queue"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/redis"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/queue"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/redis"
 )
 
 type sender struct {

@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/netguard"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/netguard"
 )
 
 const (

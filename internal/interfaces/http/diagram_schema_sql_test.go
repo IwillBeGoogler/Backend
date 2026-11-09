@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 )
 
 func TestDiagramSchemaSQLRoute(t *testing.T) {

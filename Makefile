@@ -27,7 +27,7 @@ admin: ## create super admin: make admin USERNAME=.. EMAIL=.. (password: ADMIN_P
 	go run ./cmd/createadmin -username $(USERNAME) -email $(EMAIL)
 
 seed: ## fill running stack with demo content (authors, posts, comments, claps...)
-	$(MAKE) -C ../../seed run
+	docker compose --profile dev run --rm --build seed
 
 
 generate: ## regenerate the icon catalog JSON: make generate CATALOG_SRC=/path/to/catalog.generated.ts (needs Node 22.6+)
@@ -75,7 +75,7 @@ openapi: ## generate openapi.json with Spector CLI
 	spector -dir . -o openapi.json
 
 images: ## build release images (migrate, worker, api) tagged $(TAG)
-	for t in migrate worker api; do docker build --target $$t -t iblog-$$t:$(TAG) . || exit 1; done
+	for t in migrate worker api; do docker build --target $$t -t iwillbegoogler-$$t:$(TAG) . || exit 1; done
 
 up: ## whole stack: infra -> migrate -> api + worker, waits until healthy
 	docker compose up -d --build --wait

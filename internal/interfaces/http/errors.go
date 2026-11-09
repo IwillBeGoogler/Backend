@@ -8,10 +8,10 @@ import (
 	"github.com/bakhod1r/errorx"
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/relation"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/importer"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/relation"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/importer"
 )
 
 // Application error codes (errorx leaves 6xxx to applications). A code and

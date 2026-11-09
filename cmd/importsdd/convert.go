@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 // converter turns the old rows of one project into a bundle. It reads the

@@ -21,7 +21,7 @@ import (
 	"github.com/yuin/goldmark/parser"
 	mdhtml "github.com/yuin/goldmark/renderer/html"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 )
 
 type Renderer struct {

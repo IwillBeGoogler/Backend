@@ -17,8 +17,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/app"
-	"github.com/iBlog/iblog-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/app"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 )
 
 func main() {

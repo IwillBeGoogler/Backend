@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/diagramtest"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
 )
 
 // prefixes are, after updates("compaction"), the merge of its first 1, 2, ... updates:

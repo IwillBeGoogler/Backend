@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 )
 
 func TestPacketRoundTrip(t *testing.T) {

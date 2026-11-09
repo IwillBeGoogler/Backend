@@ -10,11 +10,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/topic"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/yjs"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/topic"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/yjs"
 )
 
 // Live co-editing: a y-websocket compatible relay over MQTT. The server does
@@ -299,6 +299,13 @@ func (h *Hub) flush(ctx context.Context, r *yroom) {
 	t0 := time.Now()
 	seq, err := h.o.Y.YAppendMany(sctx, r.file, data)
 	yjsFlush.Observe(time.Since(t0).Seconds())
+	if err != nil && errors.Is(err, context.Canceled) && ctx.Err() != nil {
+		// shutting down, not a store failure: keep the batch for Close's final flush
+		r.mu.Lock()
+		r.pending = append(batch, r.pending...)
+		r.mu.Unlock()
+		return
+	}
 	if err != nil {
 		yjsFlushFail.Inc()
 		gone := errors.Is(err, domain.ErrNotFound)

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/report"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/report"
 )
 
 // createReport reports a post, comment or user to moderators.

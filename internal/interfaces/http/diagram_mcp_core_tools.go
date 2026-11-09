@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/core"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/core"
 )
 
 // The tools backed by the Go port of the TypeScript core (internal/domain/

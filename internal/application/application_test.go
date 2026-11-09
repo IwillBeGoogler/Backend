@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/comment"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/social"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/comment"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/social"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 // fakeAuthz allows owners (ABAC) and the listed permissions (RBAC).

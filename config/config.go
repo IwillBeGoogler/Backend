@@ -51,7 +51,7 @@ type Config struct {
 	SMTPUsername string `env:"SMTP_USERNAME" desc:"SMTP AUTH user; needs SMTP_TLS=starttls or tls"`
 	SMTPPassword string `env:"SMTP_PASSWORD,secret" desc:"SMTP AUTH password"`
 	SMTPTLS      string `env:"SMTP_TLS" default:"none" desc:"none (plain, Mailpit), starttls (required) or tls (implicit, port 465)"`
-	MailFrom     string `env:"MAIL_FROM" default:"no-reply@iblog.local" desc:"sender address"`
+	MailFrom     string `env:"MAIL_FROM" default:"no-reply@iwillbegoogler.local" desc:"sender address"`
 
 	SiteURL        string `env:"SITE_URL" default:"http://localhost:8081" desc:"public client site, for links in email, RSS and sitemap"`
 	ModeratorIPs   string `env:"ACCESS_MODERATOR_IPS" desc:"comma-separated client IPs moderators may use the API from; empty = any"`
@@ -91,7 +91,7 @@ type Config struct {
 	// instead of plain SHA-256). Generate with: openssl rand -hex 32
 	AuditEmailKey string `env:"AUDIT_EMAIL_KEY,secret" desc:"hex key, >= 32 bytes, for email HMAC in audit events"`
 
-	SiteName string `env:"SITE_NAME" default:"iBlog" desc:"product name in feeds and prerendered pages"`
+	SiteName string `env:"SITE_NAME" default:"IWillBeGoogler" desc:"product name in feeds and prerendered pages"`
 
 	// Cloudflare Turnstile CAPTCHA on signup. Both empty disables it.
 	TurnstileSiteKey string `env:"TURNSTILE_SITE_KEY" desc:"public Turnstile site key sent to the client; empty disables CAPTCHA"`

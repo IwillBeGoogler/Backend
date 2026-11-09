@@ -13,7 +13,7 @@ import (
 
 	_ "modernc.org/sqlite" // pure Go SQLite driver
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 var sqliteMagic = []byte("SQLite format 3\x00")

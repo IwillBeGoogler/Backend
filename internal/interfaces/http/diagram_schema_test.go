@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 type fakeSchema struct {

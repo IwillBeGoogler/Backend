@@ -10,7 +10,7 @@ import (
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/postgres"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/postgres"
 )
 
 func TestLatestMigration(t *testing.T) {

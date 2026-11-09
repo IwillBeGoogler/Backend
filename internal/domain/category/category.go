@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 )
 
 type Category struct {

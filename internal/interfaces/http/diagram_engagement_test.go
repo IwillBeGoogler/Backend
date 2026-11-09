@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/diagramtest"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/social"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/social"
 )
 
 func TestDiagramClapsAndBookmarksWire(t *testing.T) {

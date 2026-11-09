@@ -14,10 +14,10 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
 
-	"github.com/iBlog/iblog-monolith-go/app"
-	"github.com/iBlog/iblog-monolith-go/config"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/telemetry"
-	httpapi "github.com/iBlog/iblog-monolith-go/internal/interfaces/http"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/app"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/telemetry"
+	httpapi "github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http"
 )
 
 // Set at build time: -ldflags "-X main.version=... -X main.commit=..." (Dockerfile, CI).

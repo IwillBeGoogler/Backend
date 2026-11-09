@@ -30,15 +30,15 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/iBlog/iblog-monolith-go/config"
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/diagramtest"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/topic"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/yjs"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/mqtt"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/diagramhub"
-	httpapi "github.com/iBlog/iblog-monolith-go/internal/interfaces/http"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/topic"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/yjs"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/mqtt"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/diagramhub"
+	httpapi "github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http"
 )
 
 const emqxConf = `

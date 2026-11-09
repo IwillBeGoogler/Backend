@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"go.uber.org/zap"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 // Diagrams are the diagram workspace use cases. Access follows the project
@@ -373,6 +374,10 @@ func (d *Diagrams) CreateProject(ctx context.Context, actor int, in NewDiagramPr
 		return DiagramProject{}, idTaken(err)
 	}
 	if err := d.Repo.InsertFile(ctx, nf); err != nil {
+		// no empty project left behind (the file id may belong elsewhere)
+		if derr := d.Repo.DeleteProject(context.WithoutCancel(ctx), p.ID); derr != nil {
+			zap.L().Warn("diagram: undo project", zap.String("project", p.ID), zap.Error(derr))
+		}
 		return DiagramProject{}, idTaken(err)
 	}
 	if err := d.filePrivate(ctx, nf.Doc.ID, priv, now); err != nil {
@@ -624,7 +629,7 @@ func sameID(a, b *string) bool { return a == nil && b == nil || a != nil && b !=
 func (d *Diagrams) DeleteFolder(ctx context.Context, actor int, id string) (folders, files int, err error) {
 	ctx, span := tracer.Start(ctx, "Diagrams.DeleteFolder")
 	defer span.End()
-	_, f, err := d.folderAccess(ctx, actor, id, diagram.RoleEditor)
+	a, f, err := d.folderAccess(ctx, actor, id, diagram.RoleEditor)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -639,6 +644,22 @@ func (d *Diagrams) DeleteFolder(ctx context.Context, actor int, id string) (fold
 			}
 		}
 	})
+	// A per-file override can lower a project editor on some file inside:
+	// deleting the folder must not delete a file the actor may not delete.
+	if a.role != diagram.RoleOwner {
+		for _, in := range inFiles {
+			if in.FolderID == nil || !slices.Contains(ids, *in.FolderID) {
+				continue
+			}
+			over, err := d.Repo.FileRole(ctx, in.ID, actor)
+			if err != nil {
+				return 0, 0, err
+			}
+			if over != "" && !over.Allows(diagram.RoleEditor) {
+				return 0, 0, diagram.NeedRole(diagram.RoleEditor)
+			}
+		}
+	}
 	if files, err = d.Repo.DeleteFolders(ctx, f.ProjectID, ids); err != nil {
 		return 0, 0, err
 	}
@@ -933,19 +954,24 @@ func (d *Diagrams) commit(ctx context.Context, w writer, cur diagram.Doc, expect
 		return cur, diagram.VersionConflict(fresh.Version, fresh.Restored)
 	}
 	if w.restored {
-		d.resetY(ctx, cur.ID) // live editors start over from the restored document
-		d.emit(ctx, DiagramEvent{Kind: EventRestored, ProjectID: cur.ProjectID, FileID: cur.ID})
+		// live editors start over from the restored document; if the stale
+		// Yjs state could not be dropped they must not resync from it
+		if d.resetY(ctx, cur.ID) {
+			d.emit(ctx, DiagramEvent{Kind: EventRestored, ProjectID: cur.ProjectID, FileID: cur.ID})
+		}
 	}
 	if d.Events != nil {
 		d.emit(ctx, DiagramEvent{Kind: EventFile, ProjectID: cur.ProjectID, FileID: cur.ID, Version: next.Version, Name: n,
 			FileKind: next.Kind, UpdatedAt: ms(now), Restored: w.restored, By: d.actorOf(ctx, w)})
 	}
+	// The save is committed: housekeeping failures must not turn it into an error
+	// (the client would retry with a stale If-Match and conflict with itself).
 	if err := d.prune(ctx, cur.ID, now); err != nil {
-		return next, err
+		zap.L().Warn("diagram: prune versions", zap.String("file", cur.ID), zap.Error(err))
 	}
 	if n != cur.Name {
 		if _, err := d.touchFor(ctx, cur.ProjectID, actor, "file.renamed", "", cur.ID); err != nil {
-			return next, err
+			zap.L().Warn("diagram: touch project", zap.String("file", cur.ID), zap.Error(err))
 		}
 	}
 	return next, nil

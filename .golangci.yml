@@ -39,4 +39,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/iBlog/iblog-monolith-go
+        - github.com/IWillBeGoogler/iwillbegoogler-monolith-go

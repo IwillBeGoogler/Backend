@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/bakhod1r/errorx"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 )
 
 type rssFeed struct {

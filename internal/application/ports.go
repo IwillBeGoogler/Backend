@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 // Authorizer decides with RBAC + ABAC whether the caller in ctx may perform

@@ -13,9 +13,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/captcha"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/captcha"
 	"go.uber.org/zap"
 )
 
@@ -239,7 +239,7 @@ func (h *Handler) siteName() string {
 	if h.SiteName != "" {
 		return h.SiteName
 	}
-	return "iBlog"
+	return "IWillBeGoogler"
 }
 
 func (h *Handler) pageFor(ctx context.Context, path string) (pageMeta, error) {

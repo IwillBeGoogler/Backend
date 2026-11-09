@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/core"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/core"
 )
 
 // Editing a diagram page as plain JSON, for the MCP tools: add nodes and

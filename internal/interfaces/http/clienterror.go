@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/clienterror"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/clienterror"
 )
 
 // reportClientError stores a JavaScript error from the web app, grouped by a

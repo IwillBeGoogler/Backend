@@ -9,10 +9,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/mfa"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/sanction"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/mfa"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/sanction"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 const mfaChallengeTTL = 5 * time.Minute

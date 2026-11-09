@@ -20,12 +20,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/images"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/telemetry"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/http/middleware"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/images"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/telemetry"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 )
 
 // Task types.

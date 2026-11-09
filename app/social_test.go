@@ -17,7 +17,7 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 
-	"github.com/iBlog/iblog-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 )
 
 // fakeIdP is a minimal Google-like OpenID provider: discovery, JWKS, authorize (driven

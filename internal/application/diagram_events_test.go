@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 type recorder struct {
@@ -158,6 +158,19 @@ func TestDiagramEvents(t *testing.T) {
 		got := rec.take()
 		if !slices.Equal(kinds(got), []string{EventRestored, EventFile}) || !got[1].Restored {
 			t.Errorf("events = %+v", got)
+		}
+	})
+
+	t.Run("a restore whose Yjs reset fails does not tell editors to resync", func(t *testing.T) {
+		orig := d.Y
+		d.Y = failReset{orig}
+		defer func() { d.Y = orig }()
+		rec.take()
+		if _, err := d.RestoreVersion(dctx, alice, fid, 1); err != nil {
+			t.Fatal(err)
+		}
+		if got := kinds(rec.take()); slices.Contains(got, EventRestored) {
+			t.Errorf("events = %v", got)
 		}
 	})
 
@@ -370,3 +383,8 @@ func TestOpenChannel(t *testing.T) {
 		t.Errorf("an expired link: %v", err)
 	}
 }
+
+// failReset is a Yjs store whose reset fails.
+type failReset struct{ diagram.YRepository }
+
+func (failReset) YReset(context.Context, string) error { return errors.New("db down") }

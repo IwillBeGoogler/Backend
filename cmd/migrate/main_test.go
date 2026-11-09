@@ -21,8 +21,8 @@ import (
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/iBlog/iblog-monolith-go/app"
-	"github.com/iBlog/iblog-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/app"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 )
 
 // counts are the rows migrate writes; a re-run must not change them.
@@ -134,7 +134,7 @@ func TestMigrate(t *testing.T) {
 		Env: "dev", MFAKey: config.DevMFAKey, UnsubscribeKey: config.DevUnsubscribeKey,
 		MigrateOnStart: false, DBMaxConns: 5,
 		DatabaseURL: strings.Replace(dsn, "blog:blog@", "app:app@", 1), RedisURL: redisURL,
-		AdminUsername: "admin", AdminEmail: "admin@iblog.dev", AdminPassword: "admin-pass-123",
+		AdminUsername: "admin", AdminEmail: "admin@iwillbegoogler.dev", AdminPassword: "admin-pass-123",
 		S3Endpoint: s3, S3AccessKey: "minio", S3SecretKey: "minio12345", S3Bucket: "uploads",
 		SiteURL: "http://site.test", PublicURL: "http://localhost", DocsDir: "../..",
 		PasswordHashMemoryKiB: 19456, PasswordHashTime: 2, PasswordHashThreads: 1,

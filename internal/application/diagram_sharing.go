@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 // DiagramUsers is what the diagram use cases need from the accounts: the
@@ -170,7 +170,17 @@ func (d *Diagrams) Members(ctx context.Context, actor int, projectID string) ([]
 	}
 	owner := diagram.Member{UserID: a.project.OwnerID, Role: diagram.RoleOwner, CreatedAt: a.project.CreatedAt, IsOriginalOwner: true}
 	out := append([]diagram.Member{owner}, rows...)
-	return out, d.fill(ctx, out)
+	if err := d.fill(ctx, out); err != nil {
+		return nil, err
+	}
+	if a.role != diagram.RoleOwner { // collaborators' emails are for owners only
+		for i := range out {
+			if out[i].UserID != actor {
+				out[i].Email = ""
+			}
+		}
+	}
+	return out, nil
 }
 
 func checkMemberRole(role diagram.Role) error {
@@ -226,12 +236,13 @@ func (d *Diagrams) SetMemberRole(ctx context.Context, actor int, projectID strin
 	if userID == a.project.OwnerID {
 		return diagram.OwnerImmutable("The project's original owner cannot be changed")
 	}
-	old, _ := d.Repo.MemberRole(ctx, projectID, userID)
+	old, oldErr := d.Repo.MemberRole(ctx, projectID, userID)
 	ok, err := d.Sharing.UpdateMember(ctx, projectID, userID, role)
 	if err == nil && !ok {
 		err = diagram.NotFound("Member")
 	}
-	if err == nil && old != role && old.Rank() > role.Rank() {
+	// Unknown old role: revoke live channels anyway; they reconnect with the new role.
+	if err == nil && (oldErr != nil || old != role && old.Rank() > role.Rank()) {
 		d.memberLost(ctx, projectID, userID)
 	}
 	return err

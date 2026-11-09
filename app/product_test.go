@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 )
 
 func TestAnalyticsFunnelAndRetention(t *testing.T) {
@@ -130,7 +130,7 @@ func TestPrerenderForCrawlers(t *testing.T) {
 	if code, body := get("/api/prerender/@ali"); code != 200 || !strings.Contains(body, `content="profile"`) {
 		t.Errorf("profile = %d %s", code, body)
 	}
-	if code, body := get("/api/prerender/"); code != 200 || !strings.Contains(body, "iBlog") && !strings.Contains(body, "<title>") {
+	if code, body := get("/api/prerender/"); code != 200 || !strings.Contains(body, "IWillBeGoogler") && !strings.Contains(body, "<title>") {
 		t.Errorf("home = %d %s", code, body)
 	}
 	if code, _ := get("/api/prerender/p/no-such-post"); code != 404 {

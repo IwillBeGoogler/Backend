@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 	"github.com/bakhod1r/guard/ratelimit"
 )
 

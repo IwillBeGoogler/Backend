@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 )
 
 type NotificationType string

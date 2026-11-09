@@ -8,12 +8,12 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/mfa"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/sanction"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/social"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/mfa"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/sanction"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/social"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 var ErrInvalidCredentials = errors.New("invalid login or password")
@@ -71,7 +71,10 @@ func (a *Accounts) Register(ctx context.Context, username, email, password strin
 		return Session{}, err
 	}
 	if err := a.identity.CreateAccount(ctx, u.ID, reg.Email, reg.Password); err != nil {
-		if derr := a.users.Delete(ctx, u.ID); derr != nil {
+		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		derr := a.users.Delete(rctx, u.ID)
+		cancel()
+		if derr != nil {
 			zap.L().Error("rollback user", zap.Any("ctx", ctx), zap.Int("id", u.ID), zap.Error(derr))
 		}
 		return Session{}, err

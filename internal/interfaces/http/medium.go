@@ -1,13 +1,13 @@
 package http
 
 import (
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/http/middleware"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/readinglist"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/social"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/readinglist"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/social"
 )
 
 const listNotFound = "list not found"

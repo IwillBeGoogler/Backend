@@ -42,7 +42,7 @@ func (h *Handler) mqttBroker(w http.ResponseWriter, r *http.Request) bool {
 
 // mqttDecisions counts the broker's questions and the answers (kind: auth, publish, subscribe ...).
 var mqttDecisions = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "iblog_mqtt_decisions_total",
+	Name: "iwillbegoogler_mqtt_decisions_total",
 	Help: "Broker auth and ACL decisions by kind and result.",
 }, []string{"kind", "result"})
 

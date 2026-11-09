@@ -8,20 +8,20 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/category"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/clienterror"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/comment"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/feedback"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/publication"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/readinglist"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/relation"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/report"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/revision"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/series"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/social"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/clienterror"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/comment"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/feedback"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/publication"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/readinglist"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/relation"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/report"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/revision"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/series"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/social"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 func itoa(n int) string { return strconv.Itoa(n) }
@@ -320,6 +320,11 @@ func (b *Blog) PublishScheduled(ctx context.Context, id int) error {
 		p, err := b.Posts.Get(ctx, id, 0)
 		if err != nil || !p.IsPublic() {
 			return ignoreNotFound(err)
+		}
+		// A stale task (the post was rescheduled earlier and already fanned
+		// out) must not notify followers again once the TaskID dedupe expired.
+		if p.PublishedAt != nil && b.now().Sub(*p.PublishedAt) > 12*time.Hour {
+			return nil
 		}
 		return b.Jobs.FanoutNewPost(ctx, id)
 	}

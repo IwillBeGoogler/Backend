@@ -18,7 +18,7 @@ on:
       migrate-mode: { type: string, default: up, description: "up (release) | skip (rollback, keep schema) | down (rollback schema with goose, destructive)" }
       service-args: { type: string, default: "{}", description: "JSON: extra docker run args per service" }
       network: { type: string, default: "", description: 'docker network the containers join ("" = DOCKER_NETWORK var, unset = default bridge)' }
-      container-prefix: { type: string, default: "", description: 'container name prefix, e.g. "iblog-"' }
+      container-prefix: { type: string, default: "", description: 'container name prefix, e.g. "iwillbegoogler-"' }
       health-timeout: { type: number, default: 120, description: seconds to wait for each app }
       keep-tags: { type: number, default: 3, description: image tags kept on the server }
       log-tail: { type: number, default: 100, description: container log lines shown on failure }

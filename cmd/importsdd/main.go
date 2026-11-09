@@ -28,12 +28,12 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/app/core"
-	"github.com/iBlog/iblog-monolith-go/config"
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/guardauth"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/postgres"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/storage"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/app/core"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/guardauth"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/postgres"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/storage"
 )
 
 func main() {

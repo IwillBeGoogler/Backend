@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/topic"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/yjs"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/topic"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/yjs"
 )
 
 // Two API replicas share one database; the shared subscription splits one

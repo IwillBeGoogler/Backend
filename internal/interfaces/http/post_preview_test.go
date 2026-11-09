@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/markdown"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/markdown"
 )
 
 func previewServer(t *testing.T, limit Limiter) *httptest.Server {

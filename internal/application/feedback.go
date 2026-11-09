@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/feedback"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/feedback"
 )
 
 // SubmitFeedback stores a bug report or idea. Anyone may send one, so there

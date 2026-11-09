@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 func lookupTo(ips ...string) func(context.Context, string) ([]netip.Addr, error) {

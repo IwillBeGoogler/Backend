@@ -6,8 +6,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/topic"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/yjs"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/topic"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/yjs"
 )
 
 func val(c prometheus.Metric) float64 {

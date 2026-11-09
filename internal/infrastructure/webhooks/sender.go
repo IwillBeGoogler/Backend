@@ -16,9 +16,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/netguard"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/netguard"
 )
 
 const (
@@ -32,11 +32,11 @@ const (
 // No labels carry webhook or project ids: cardinality stays fixed.
 var (
 	attempts = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "iblog_webhook_attempts_total",
+		Name: "iwillbegoogler_webhook_attempts_total",
 		Help: "Webhook delivery attempts by result: 2xx, 3xx, 4xx, 5xx, timeout, blocked or error.",
 	}, []string{"result"})
 	attemptSeconds = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "iblog_webhook_attempt_seconds",
+		Name:    "iwillbegoogler_webhook_attempt_seconds",
 		Help:    "Duration of one webhook delivery attempt.",
 		Buckets: []float64{.05, .1, .25, .5, 1, 2.5, 5},
 	})

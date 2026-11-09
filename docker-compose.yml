@@ -10,14 +10,14 @@
 # Infra ports bind to 127.0.0.1 only, on the same host ports .env uses, so
 # `go run ./cmd/app` on the host keeps working against this stack.
 
-name: iblog
+name: iwillbegoogler
 
 x-app-env: &app-env
   DATABASE_URL: postgres://blog:blog@postgres:5432/blog?sslmode=disable
   REDIS_URL: redis://redis:6379/0
   MQTT_URL: tcp://emqx:1883
   EMQX_API_URL: http://emqx:18083
-  EMQX_API_KEY: ${EMQX_API_KEY:-iblog-api}
+  EMQX_API_KEY: ${EMQX_API_KEY:-iwillbegoogler-api}
   EMQX_API_SECRET: ${EMQX_API_SECRET:-dev-emqx-api-secret-change-me-0123456789}
   S3_ENDPOINT: minio:9000
   SMTP_ADDR: mailpit:1025
@@ -122,7 +122,7 @@ services:
     build:
       context: .
       target: migrate
-    image: iblog-migrate:dev
+    image: iwillbegoogler-migrate:dev
     env_file: .env
     environment: *app-env
     restart: "no"
@@ -137,7 +137,7 @@ services:
     build:
       context: .
       target: api
-    image: iblog-api:dev
+    image: iwillbegoogler-api:dev
     environment:
       <<: *app-env
       WORKER: "false" # jobs run in the worker service
@@ -160,24 +160,22 @@ services:
     build:
       context: .
       target: worker
-    image: iblog-worker:dev
+    image: iwillbegoogler-worker:dev
     environment:
       <<: *app-env
       METRICS_ADDR: ":9090" # worker -healthcheck needs this listener
 
-  # Dev-only demo data from the iblog-seed repo (../../seed). Not started by
-  # `up`; run it once:
+  # Dev-only demo data (./seed). Not started by `up`; re-running is safe:
   #   docker compose --profile dev run --rm seed
   seed:
     profiles: ["dev"]
     build:
-      context: ../../seed
-    image: iblog-seed:dev
+      context: ./seed
+    image: iwillbegoogler-seed:dev
     env_file: .env
     environment:
       SEED_API: http://api:${PORT:-8080}
       SEED_DATABASE_URL: postgres://blog:blog@postgres:5432/blog?sslmode=disable
-      SEED_REDIS_URL: redis://redis:6379/0
     restart: "no"
     depends_on:
       api:
@@ -187,7 +185,7 @@ services:
 configs:
   emqx_api_keys:
     content: |
-      ${EMQX_API_KEY:-iblog-api}:${EMQX_API_SECRET:-dev-emqx-api-secret-change-me-0123456789}:administrator
+      ${EMQX_API_KEY:-iwillbegoogler-api}:${EMQX_API_SECRET:-dev-emqx-api-secret-change-me-0123456789}:administrator
   emqx_conf:
     content: |
       # this file replaces the image's emqx.conf, so the node block it carried must be repeated here

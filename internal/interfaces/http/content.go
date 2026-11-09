@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/series"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/series"
 )
 
 type seriesPostsInput struct {

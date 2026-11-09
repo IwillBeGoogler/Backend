@@ -6,7 +6,7 @@ import (
 
 	identitydomain "github.com/bakhod1r/guard/identity/domain"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 )
 
 func TestWeakPasswordErr(t *testing.T) {

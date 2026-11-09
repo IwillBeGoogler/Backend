@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/core"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/sddfile"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/core"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/sddfile"
 )
 
 // The text flavour of .sdd ("#!sdd", diagrams as code): export of the active

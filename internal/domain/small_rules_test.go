@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/relation"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/revision"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/series"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/social"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/user"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/relation"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/revision"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/series"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/social"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 func TestKindsValid(t *testing.T) {

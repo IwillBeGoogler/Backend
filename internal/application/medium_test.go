@@ -3,7 +3,7 @@ package application
 import (
 	"testing"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/post"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 )
 
 func TestPinOwnPublishedOnly(t *testing.T) {

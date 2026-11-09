@@ -6,8 +6,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 )
 
 // Realtime events of the diagram workspace. Use cases tell DiagramEvents
@@ -190,12 +190,18 @@ func (d *Diagrams) ShareLinkOf(ctx context.Context, token string) (projectID, sh
 	return sa.link.ProjectID, sa.link.ID, err
 }
 
-// resetY forgets the stored Yjs state of a file whose document was replaced.
-func (d *Diagrams) resetY(ctx context.Context, fileID string) {
+// resetY forgets the stored Yjs state of a file whose document was replaced,
+// trying twice. It reports whether the state is gone.
+func (d *Diagrams) resetY(ctx context.Context, fileID string) bool {
 	if d.Y == nil {
-		return
+		return true
 	}
-	if err := d.Y.YReset(ctx, fileID); err != nil && !errors.Is(err, domain.ErrNotFound) {
-		zap.L().Warn("diagram: reset yjs state", zap.String("file", fileID), zap.Error(err))
+	var err error
+	for range 2 {
+		if err = d.Y.YReset(ctx, fileID); err == nil || errors.Is(err, domain.ErrNotFound) {
+			return true
+		}
 	}
+	zap.L().Error("diagram: reset yjs state", zap.String("file", fileID), zap.Error(err))
+	return false
 }

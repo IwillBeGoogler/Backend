@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/domain/relation"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/relation"
 )
 
 type mfaLoginInput struct {

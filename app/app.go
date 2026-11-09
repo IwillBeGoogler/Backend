@@ -20,24 +20,24 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/app/core"
-	"github.com/iBlog/iblog-monolith-go/config"
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/topic"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/captcha"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/emqx"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/guardauth"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/introspect"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/mail"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/mqtt"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/queue"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/redis"
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/schemadump"
-	socialauth "github.com/iBlog/iblog-monolith-go/internal/infrastructure/social"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/diagramhub"
-	httpapi "github.com/iBlog/iblog-monolith-go/internal/interfaces/http"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/http/middleware"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/app/core"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/topic"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/captcha"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/emqx"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/guardauth"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/introspect"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/mail"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/mqtt"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/queue"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/redis"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/schemadump"
+	socialauth "github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/social"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/diagramhub"
+	httpapi "github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 )
 
 type App struct {
@@ -350,7 +350,7 @@ func mountDocs(mux *http.ServeMux, cfg config.Config) {
 	}
 	docs := spector.Handler(spector.Config{
 		Dir:        cfg.DocsDir,
-		Title:      "iBlog Blog API",
+		Title:      "IWillBeGoogler Blog API",
 		Version:    "2.0.0",
 		Adapter:    "stdlib",
 		BasePath:   base,

@@ -1,5 +1,5 @@
 # Spector CLI config: `spector -dir . -o openapi.json`, `spector -dir . -sdk ts -sdk-out ../client-react/src/api/gen`
-title: iBlog Blog API
+title: IWillBeGoogler Blog API
 version: 1.0.0
 adapter: stdlib
 servers:

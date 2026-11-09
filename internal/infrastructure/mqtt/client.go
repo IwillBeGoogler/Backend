@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 )
 
 // Origin is the user property that carries the id of the client that caused
@@ -28,15 +28,15 @@ const Origin = "origin"
 
 var (
 	connected = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "iblog_mqtt_client_connected",
+		Name: "iwillbegoogler_mqtt_client_connected",
 		Help: "1 while the API's own broker connection is up.",
 	})
 	received = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "iblog_mqtt_messages_received_total",
+		Name: "iwillbegoogler_mqtt_messages_received_total",
 		Help: "Messages the API received from the broker.",
 	})
 	published = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "iblog_mqtt_messages_published_total",
+		Name: "iwillbegoogler_mqtt_messages_published_total",
 		Help: "Messages the API published, by outcome.",
 	}, []string{"result"})
 )

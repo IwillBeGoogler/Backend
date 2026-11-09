@@ -20,8 +20,8 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/interfaces/diagramhub"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/diagramhub"
 )
 
 // tickets is single-use stream tickets in memory.

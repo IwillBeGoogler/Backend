@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/diagramtest"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/topic"
-	"github.com/iBlog/iblog-monolith-go/internal/domain/diagram/yjs"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/topic"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/yjs"
 )
 
 // broker stands in for EMQX: it records what the hub publishes, keeps the
@@ -562,4 +562,38 @@ func TestDeniedNotifiesTheClient(t *testing.T) {
 	h, b := fixture(t, nil, Options{})
 	h.Denied(viewer, "f")
 	eventually(t, "denied", func() bool { return len(b.jsonOn(t, topic.CtlTopic(viewer), "denied")) == 1 })
+}
+
+// stalling is a store whose first write waits for its context to end.
+type stalling struct {
+	*diagramtest.Memory
+	once    sync.Once
+	started chan struct{}
+}
+
+func (s *stalling) YAppendMany(ctx context.Context, f string, d [][]byte) (int64, error) {
+	stall := false
+	s.once.Do(func() { stall = true })
+	if stall {
+		close(s.started)
+		<-ctx.Done()
+		return 0, ctx.Err()
+	}
+	return s.Memory.YAppendMany(ctx, f, d)
+}
+
+func TestYjsCloseKeepsAFlushCutShort(t *testing.T) {
+	s := &stalling{Memory: store(t, "f"), started: make(chan struct{})}
+	h, b := fixture(t, nil, Options{Y: s})
+	b.from(alice, topic.YjsUpTopic("f", alice), yjs.Update(updates(t, "map values")[0]))
+	select {
+	case <-s.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("no flush")
+	}
+	h.Close()
+	st, _ := s.YLoad(context.Background(), "f")
+	if len(st.Updates) != 1 {
+		t.Errorf("stored %d updates, want 1", len(st.Updates))
+	}
 }

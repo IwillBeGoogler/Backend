@@ -11,7 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"github.com/iBlog/iblog-monolith-go/internal/infrastructure/guardauth"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/guardauth"
 )
 
 const (
@@ -140,6 +140,9 @@ func (r *recorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 // private documents that never reach public pages), never public content,
 // so they must not throw the shared cache away.
 func sessionOnly(path string) bool {
+	if strings.HasPrefix(path, "/api/diagrams/files/") && strings.HasSuffix(path, "/publish") {
+		return false // publish/unpublish changes embeds in cached public posts
+	}
 	return strings.HasPrefix(path, "/api/auth/") || strings.HasPrefix(path, "/api/guard/") || strings.HasPrefix(path, "/api/diagrams/")
 }
 

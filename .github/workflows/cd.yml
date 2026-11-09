@@ -9,7 +9,7 @@ name: CD
 # Jobs are reusable workflows (_*.yml, defaults in their inputs); this file
 # passes only what is specific to this service. Long steps are plain scripts in ../scripts/.
 #
-# Repository var: APP_NAME (image/artifact/container prefix, e.g. iblog).
+# Repository var: APP_NAME (image/artifact/container prefix, e.g. iwillbegoogler).
 # GitHub environments (same names, different values):
 #   vars:    SERVER_HOST, SERVER_USER, DEPLOY_DIR, DOCKER_NETWORK, DOCKERHUB_USERNAME, IMAGE_NAME,
 #            TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID (optional), CREDS_CMD (systemd-creds only)

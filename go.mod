@@ -1,4 +1,4 @@
-module github.com/iBlog/iblog-monolith-go
+module github.com/IWillBeGoogler/iwillbegoogler-monolith-go
 
 go 1.27.3
 

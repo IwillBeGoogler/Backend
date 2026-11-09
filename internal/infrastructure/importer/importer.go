@@ -18,8 +18,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/iBlog/iblog-monolith-go/internal/application"
-	"github.com/iBlog/iblog-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/net/html"
 )
@@ -103,7 +103,7 @@ func (im *Importer) Fetch(ctx context.Context, raw string) (application.Imported
 		return application.Imported{}, err
 	}
 	req.Header.Set("Accept", "text/html")
-	req.Header.Set("User-Agent", "iBlog-Importer/1.0")
+	req.Header.Set("User-Agent", "IWillBeGoogler-Importer/1.0")
 	res, err := im.client.Do(req)
 	if errors.Is(err, ErrForbiddenAddress) {
 		return application.Imported{}, ErrForbiddenAddress
