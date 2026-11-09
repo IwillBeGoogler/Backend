@@ -1,18 +1,14 @@
 name: CD
 
-# Release pipeline for main (production) and dev (dev): build -> scan -> push images, then hand the
-# deploy to the infra repo. Production runs docker compose from
-# IwillBeGoogler/Infra (env rendered from Vault on the server); this
-# repo no longer touches the server. _deploy.yml and _env.yml (SSH deploy) are
-# kept but unused here: dev-only legacy.
-#   meta -> build -> scan -> push -> deploy (repository_dispatch to infra) -> notify
+# Release pipeline for main (production):
+#   meta -> build -> scan -> push -> deploy (self-hosted runner on the server, infra/deploy/server/ci-deploy.sh) -> notify
+# The stack (compose, Caddy, server scripts, Vault setup) lives in infra/ of this repo; Web and Admin deploy their own
+# service through the same runner and script. _deploy.yml and _env.yml (old SSH deploy) are unused legacy.
 # Images: docker.io/bakhod1r/iwillbegoogler-{migrate,api,worker}:<short sha>
 #
-# Secrets come from Vault via GitHub OIDC (JWT auth), none from GitHub secrets
-# except the optional TELEGRAM_BOT_TOKEN:
-#   role iwillbegoogler-ci-images (main -> production, dev -> dev)
-#   kv/data/ci/dockerhub  username, token   (push)
-#   kv/data/ci/github     dispatch_token    (dispatch)
+# Secrets come from Vault via GitHub OIDC (JWT auth), none from GitHub secrets except the optional TELEGRAM_BOT_TOKEN:
+#   role iwillbegoogler-ci-images          kv/data/ci/dockerhub  username, token   (push)
+#   role iwillbegoogler-production-ci      issue/destroy secret_ids of AppRole iwillbegoogler-production (deploy)
 # Repo/org vars: APP_NAME (e.g. iwillbegoogler), VAULT_ADDR, TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID (optional).
 on:
   push:
@@ -73,47 +69,47 @@ jobs:
       targets: *targets
       app-name: *app-name
 
-  # Tell the infra repo to roll out <tag>. Runs after a successful push, or
-  # straight after meta on a manual rollback. Job id stays `deploy` (notify reads it).
+  # Roll out <tag> on the server: self-hosted runner there (label iwillbegoogler-prod, deploy user). GitHub OIDC ->
+  # Vault role iwillbegoogler-<env>-ci -> infra/deploy/server/ci-deploy.sh: syncs infra/ to the server, fresh
+  # wrapped secret_id, deploy.sh (migrate, health, automatic rollback), old secret_ids destroyed.
+  # Runs after a successful push, or straight after meta on a manual rollback. Job id stays `deploy` (notify reads it).
   deploy:
     needs: [meta, push]
     if: >-
       always() && needs.meta.result == 'success' &&
       (needs.push.result == 'success' || needs.meta.outputs.rollback == 'true')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    runs-on: [self-hosted, iwillbegoogler-prod]
+    timeout-minutes: 30
     environment: ${{ needs.meta.outputs.environment }}
     permissions:
       contents: read
       id-token: write
     steps:
-      - name: Vault secrets
-        id: vault
+      - name: Checkout stack files
+        uses: actions/checkout@v7.0.1
+        with:
+          sparse-checkout: |
+            infra
+            docker-compose.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Vault login (GitHub OIDC)
         uses: hashicorp/vault-action@v3.4.0
         with:
           url: ${{ vars.VAULT_ADDR }}
           method: jwt
+          path: jwt
+          role: iwillbegoogler-${{ needs.meta.outputs.environment }}-ci
           jwtGithubAudience: iwillbegoogler-vault
-          role: iwillbegoogler-ci-images
-          exportEnv: false
-          secrets: |
-            kv/data/ci/github dispatch_token | DISPATCH_TOKEN
+          exportToken: true
 
-      - name: Dispatch deploy
+      - name: Deploy
         env:
-          DISPATCH_TOKEN: ${{ steps.vault.outputs.DISPATCH_TOKEN }}
-          TAG: ${{ needs.meta.outputs.tag }}
           ENV_NAME: ${{ needs.meta.outputs.environment }}
-        run: |
-          set -euo pipefail
-          payload=$(jq -cn --arg tag "$TAG" --arg env "$ENV_NAME" '{event_type: "deploy", client_payload: {service: "backend", tag: $tag, environment: $env}}')
-          curl -fsS -X POST \
-            -H "Authorization: Bearer $DISPATCH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/IwillBeGoogler/Infra/dispatches \
-            -d "$payload"
-          echo "::notice::Dispatched deploy backend:$TAG ($ENV_NAME) to iwillbegoogler-infra"
+          SERVICE: backend
+          TAG: ${{ needs.meta.outputs.tag }}
+          SRC: ${{ github.workspace }}
+        run: bash infra/deploy/server/ci-deploy.sh
 
   notify:
     needs: [meta, build, scan, push, deploy]
