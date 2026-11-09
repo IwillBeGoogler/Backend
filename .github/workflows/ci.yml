@@ -9,6 +9,8 @@ on:
   pull_request:
     # Literal on purpose: GitHub does not evaluate expressions in triggers.
     branches: [main, dev]
+  push:
+    branches: [dev] # integration branch: CI only, main is checked by cd.yml
 
 # A newer push to the same PR makes the older run stale.
 concurrency:
@@ -21,6 +23,30 @@ permissions:
 jobs:
   lint:
     uses: ./.github/workflows/_go-lint.yml
+
+  # infra/: server scripts, compose stack, workflows
+  infra:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: shellcheck
+        run: find infra/deploy -type f \( -name '*.sh' -o -name iwillbegoogler-secrets \) -print0 | xargs -0 shellcheck -x -S warning
+      - name: compose config
+        env: # written by iwillbegoogler-secrets render on the server
+          VAULT_ADDR: https://vault.example:8200
+          VAULT_ROLE_ID: ci-dummy
+          VAULT_KV_PATH: kv/data/iwillbegoogler/production
+        run: |
+          mkdir -p infra/Backend && cp docker-compose.yml infra/Backend/ # server layout: $DEPLOY_DIR/Backend/docker-compose.yml
+          cd infra
+          docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml config -q
+          docker compose --env-file .env.prod.example -f docker-compose.yml -f docker-compose.prod.yml -f deploy/proxy/docker-compose.behind-nginx.yml config -q
+          sh deploy/check-env.sh
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
 
   vuln:
     uses: ./.github/workflows/_go-vuln.yml

@@ -1,0 +1,657 @@
+{
+ "uid": "iwillbegoogler-overview",
+ "title": "IWillBeGoogler overview",
+ "tags": [
+  "iwillbegoogler"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "30s",
+ "time": {
+  "from": "now-1h",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "type": "row",
+   "title": "API",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "id": 1
+  },
+  {
+   "id": 101,
+   "type": "timeseries",
+   "title": "Request rate by status class",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 0,
+    "y": 1
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (status) (label_replace(rate(http_requests_total{job=\"api\"}[1m]), \"status\", \"${1}xx\", \"status\", \"(.)..\")) ",
+     "legendFormat": "{{status}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 102,
+   "type": "timeseries",
+   "title": "Latency p50 / p95 / p99",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 8,
+    "y": 1
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m])))",
+     "legendFormat": "p50",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m])))",
+     "legendFormat": "p95",
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m])))",
+     "legendFormat": "p99",
+     "refId": "C"
+    }
+   ]
+  },
+  {
+   "id": 103,
+   "type": "timeseries",
+   "title": "5xx error ratio",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 16,
+    "y": 1
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(http_requests_total{job=\"api\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{job=\"api\"}[5m])), 1e-9)",
+     "legendFormat": "5xx",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 104,
+   "type": "timeseries",
+   "title": "Slowest routes (p95)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=\"api\"}[5m]))))",
+     "legendFormat": "{{route}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 105,
+   "type": "timeseries",
+   "title": "Go goroutines / RSS",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "go_goroutines{job=\"api\"}",
+     "legendFormat": "goroutines",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "process_resident_memory_bytes{job=\"api\"}",
+     "legendFormat": "rss bytes",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "MQTT (EMQX broker)",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 15
+   },
+   "id": 7
+  },
+  {
+   "id": 106,
+   "type": "timeseries",
+   "title": "Connections / subscriptions",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 0,
+    "y": 16
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "emqx_connections_count",
+     "legendFormat": "connections",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "emqx_subscriptions_count",
+     "legendFormat": "subscriptions",
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "emqx_sessions_count",
+     "legendFormat": "sessions",
+     "refId": "C"
+    }
+   ]
+  },
+  {
+   "id": 107,
+   "type": "timeseries",
+   "title": "Messages in / out per second",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 8,
+    "y": 16
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(emqx_messages_received[1m])",
+     "legendFormat": "received",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(emqx_messages_sent[1m])",
+     "legendFormat": "sent",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 108,
+   "type": "timeseries",
+   "title": "Dropped messages per second",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 16,
+    "y": 16
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(emqx_messages_dropped[1m])",
+     "legendFormat": "dropped",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(emqx_delivery_dropped[1m])",
+     "legendFormat": "delivery dropped",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Diagram realtime (API)",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 23
+   },
+   "id": 11
+  },
+  {
+   "id": 109,
+   "type": "timeseries",
+   "title": "API broker connection (1 = up) / ACL+auth decisions",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 0,
+    "y": 24
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "iwillbegoogler_mqtt_client_connected",
+     "legendFormat": "api connected",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (kind, result) (rate(iwillbegoogler_mqtt_decisions_total[1m]))",
+     "legendFormat": "{{kind}} {{result}}/s",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 110,
+   "type": "timeseries",
+   "title": "Yjs updates in / out per second",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 8,
+    "y": 24
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(iwillbegoogler_yjs_updates_in_total[1m])",
+     "legendFormat": "in",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(iwillbegoogler_yjs_updates_out_total[1m])",
+     "legendFormat": "out",
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(iwillbegoogler_mqtt_messages_published_total{result!=\"ok\"}[1m])",
+     "legendFormat": "publish failures",
+     "refId": "C"
+    }
+   ]
+  },
+  {
+   "id": 111,
+   "type": "timeseries",
+   "title": "Batch write latency p50 / p95 + failures",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 16,
+    "y": 24
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le) (rate(iwillbegoogler_yjs_batch_write_seconds_bucket[5m])))",
+     "legendFormat": "p50",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(iwillbegoogler_yjs_batch_write_seconds_bucket[5m])))",
+     "legendFormat": "p95",
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(iwillbegoogler_yjs_batch_write_failures_total[5m])",
+     "legendFormat": "failures/s",
+     "refId": "C"
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Postgres and Redis",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 31
+   },
+   "id": 15
+  },
+  {
+   "id": 112,
+   "type": "timeseries",
+   "title": "Postgres up / connections",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 0,
+    "y": 32
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "pg_up",
+     "legendFormat": "up",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(pg_stat_database_numbackends{datname=\"blog\"})",
+     "legendFormat": "backends",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 113,
+   "type": "timeseries",
+   "title": "Postgres commits / rollbacks per second",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 8,
+    "y": 32
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(pg_stat_database_xact_commit{datname=\"blog\"}[1m])",
+     "legendFormat": "commit",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(pg_stat_database_xact_rollback{datname=\"blog\"}[1m])",
+     "legendFormat": "rollback",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "id": 114,
+   "type": "timeseries",
+   "title": "Redis clients / memory",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 16,
+    "y": 32
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "redis_connected_clients",
+     "legendFormat": "clients",
+     "refId": "A"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "redis_memory_used_bytes",
+     "legendFormat": "memory bytes",
+     "refId": "B"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(redis_commands_processed_total[1m])",
+     "legendFormat": "cmds/s",
+     "refId": "C"
+    }
+   ]
+  }
+ ]
+}

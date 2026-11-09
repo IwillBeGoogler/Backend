@@ -1,0 +1,10 @@
+/Backend/
+/Web/
+/Admin/
+node_modules/
+.playwright-mcp/
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.prod.example
