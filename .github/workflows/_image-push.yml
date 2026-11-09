@@ -13,7 +13,7 @@ on:
       targets: { type: string, required: true, description: 'JSON array of Dockerfile stages, e.g. ["api","worker"]' }
       app-name: { type: string, required: true, description: local image and artifact prefix }
       image-name: { type: string, default: docker.io/bakhod1r/iwillbegoogler, description: "registry image prefix; pushes <image-name>-<target>:<tag>" }
-      vault-role: { type: string, default: iwillbegoogler-production-ci-images, description: Vault JWT role }
+      vault-role: { type: string, default: iwillbegoogler-ci-images, description: Vault JWT role }
       vault-secret-path: { type: string, default: kv/data/ci/dockerhub, description: Vault KV v2 path with username and token }
       runner: { type: string, default: ubuntu-24.04, description: runner label }
       timeout-minutes: { type: number, default: 10, description: job timeout }
