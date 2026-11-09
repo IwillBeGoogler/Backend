@@ -9,6 +9,8 @@ on:
   pull_request:
     # Literal on purpose: GitHub does not evaluate expressions in triggers.
     branches: [main, dev]
+  push:
+    branches: [dev] # integration branch: CI only, main is checked by cd.yml
 
 # A newer push to the same PR makes the older run stale.
 concurrency:
