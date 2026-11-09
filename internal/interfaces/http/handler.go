@@ -281,6 +281,9 @@ func (h *Handler) requireUser(w http.ResponseWriter, r *http.Request) (user.User
 // allow applies a rate limit keyed by user (or IP for anonymous callers)
 // and writes 429 when exceeded.
 func (h *Handler) allow(w http.ResponseWriter, r *http.Request, name string, n int, window time.Duration) bool {
+	if h.Limit == nil {
+		return true // no limiter wired (tests, tools): never panic
+	}
 	key := "ip:" + h.clientIP(r)
 	if id := h.viewerID(r); id != 0 {
 		key = "user:" + strconv.Itoa(id)
