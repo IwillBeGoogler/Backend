@@ -1,8 +1,8 @@
 name: CD
 
-# Release pipeline for main: build -> scan -> push images, then hand the
+# Release pipeline for main (production) and dev (dev): build -> scan -> push images, then hand the
 # deploy to the infra repo. Production runs docker compose from
-# bakhod1r/iwillbegoogler-infra (env rendered from Vault on the server); this
+# IwillBeGoogler/Infra (env rendered from Vault on the server); this
 # repo no longer touches the server. _deploy.yml and _env.yml (SSH deploy) are
 # kept but unused here: dev-only legacy.
 #   meta -> build -> scan -> push -> deploy (repository_dispatch to infra) -> notify
@@ -10,14 +10,14 @@ name: CD
 #
 # Secrets come from Vault via GitHub OIDC (JWT auth), none from GitHub secrets
 # except the optional TELEGRAM_BOT_TOKEN:
-#   role iwillbegoogler-production-ci-images
+#   role iwillbegoogler-ci-images (main -> production, dev -> dev)
 #   kv/data/ci/dockerhub  username, token   (push)
 #   kv/data/ci/github     dispatch_token    (dispatch)
 # Repo/org vars: APP_NAME (e.g. iwillbegoogler), VAULT_ADDR, TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID (optional).
 on:
   push:
     # Literal on purpose: GitHub does not evaluate expressions in triggers.
-    branches: [main]
+    branches: [main] # dev: CI only (no dev environment)
   # Manual run: rebuild branch HEAD, or roll back by dispatching an existing tag.
   workflow_dispatch:
     inputs:
@@ -28,7 +28,7 @@ on:
 
 # Never cancel a release mid-way.
 concurrency:
-  group: cd-production
+  group: cd-${{ github.ref_name == 'main' && 'production' || 'dev' }}
   cancel-in-progress: false
 
 permissions:
@@ -94,7 +94,7 @@ jobs:
           url: ${{ vars.VAULT_ADDR }}
           method: jwt
           jwtGithubAudience: iwillbegoogler-vault
-          role: iwillbegoogler-production-ci-images
+          role: iwillbegoogler-ci-images
           exportEnv: false
           secrets: |
             kv/data/ci/github dispatch_token | DISPATCH_TOKEN
@@ -103,16 +103,17 @@ jobs:
         env:
           DISPATCH_TOKEN: ${{ steps.vault.outputs.DISPATCH_TOKEN }}
           TAG: ${{ needs.meta.outputs.tag }}
+          ENV_NAME: ${{ needs.meta.outputs.environment }}
         run: |
           set -euo pipefail
-          payload=$(jq -cn --arg tag "$TAG" '{event_type: "deploy", client_payload: {service: "backend", tag: $tag}}')
+          payload=$(jq -cn --arg tag "$TAG" --arg env "$ENV_NAME" '{event_type: "deploy", client_payload: {service: "backend", tag: $tag, environment: $env}}')
           curl -fsS -X POST \
             -H "Authorization: Bearer $DISPATCH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/bakhod1r/iwillbegoogler-infra/dispatches \
+            https://api.github.com/repos/IwillBeGoogler/Infra/dispatches \
             -d "$payload"
-          echo "::notice::Dispatched deploy backend:$TAG to iwillbegoogler-infra"
+          echo "::notice::Dispatched deploy backend:$TAG ($ENV_NAME) to iwillbegoogler-infra"
 
   notify:
     needs: [meta, build, scan, push, deploy]
