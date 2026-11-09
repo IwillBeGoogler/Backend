@@ -17,7 +17,7 @@ name: CD
 on:
   push:
     # Literal on purpose: GitHub does not evaluate expressions in triggers.
-    branches: [main, dev]
+    branches: [main] # dev: CI only (no dev environment)
   # Manual run: rebuild branch HEAD, or roll back by dispatching an existing tag.
   workflow_dispatch:
     inputs:
@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   meta:
-    if: github.ref_name == 'main' || github.ref_name == 'dev'
+    if: github.ref_name == 'main'
     uses: ./.github/workflows/_meta.yml
     with:
       rollback-tag: ${{ inputs.rollback-tag }}
