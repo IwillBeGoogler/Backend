@@ -1,0 +1,154 @@
+# Whole local stack: Backend (infra + migrate + api + worker) + Web (blog + diagram editor) + Admin.
+#
+#   cp Backend/.env.example Backend/.env
+#   docker compose up -d --build
+#   open http://localhost:3000     # Web   (proxies /api to the api service; /mqtt to emqx needs the route in Web, see Backend/docs/MQTT.md)
+#   open http://localhost:3100     # Admin (proxies /api to the api service)
+#   docker compose --profile dev run --rm seed     # demo data (Backend/seed), safe to re-run
+#
+# Backend's own compose file is included as is: it keeps working alone (`cd Backend && docker compose up`), and its
+# service names (api, worker, postgres ...) are what Web's and Admin's nginx proxy to (API_URL=http://api:8080).
+#
+# Each app builds from its own folder (Web/, Admin/); Web carries its diagram editor in Web/editor, see Web/DIAGRAMS.md.
+
+name: iwillbegoogler
+
+include:
+  - Backend/docker-compose.yml
+
+services:
+  web:
+    build:
+      context: Web
+    image: iwillbegoogler-web:dev
+    environment:
+      API_URL: http://api:${PORT:-8080}
+      # The broker's WebSocket listener, for the site's own /mqtt route (nginx must proxy it with the Upgrade headers,
+      # and must not route /api/internal/ at all: see Backend/docs/MQTT.md).
+      MQTT_URL: http://emqx:8083
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: Admin
+    image: iwillbegoogler-admin:dev
+    environment:
+      API_URL: http://api:${PORT:-8080}
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-3100}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------- optional monitoring: docker compose --profile monitoring up -d ----------
+  # Prometheus http://127.0.0.1:9091 (targets: /targets), Grafana http://127.0.0.1:3200 (admin / GRAFANA_ADMIN_PASSWORD, default admin).
+  # About 300 MB all together. Setup and notes: deploy/README.md "Monitoring stack".
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=3d
+      - --storage.tsdb.retention.size=500MB
+      - --web.enable-lifecycle
+    configs:
+      - source: prometheus_conf
+        target: /etc/prometheus/prometheus.yml
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9091}:9090"
+    volumes:
+      - prometheusdata:/prometheus
+      - ./deploy/monitoring/prometheus:/etc/prometheus/rules:ro
+    deploy:
+      resources:
+        limits: { memory: 256M }
+    restart: unless-stopped
+    depends_on: [postgres-exporter, redis-exporter]
+
+  postgres-exporter:
+    profiles: ["monitoring"]
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_NAME: postgres://blog:${POSTGRES_PASSWORD:-blog}@postgres:5432/blog?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { memory: 48M }
+    restart: unless-stopped
+
+  redis-exporter:
+    profiles: ["monitoring"]
+    image: oliver006/redis_exporter:v1.74.0-alpine
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { memory: 48M }
+    restart: unless-stopped
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:12.1.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3200}:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    deploy:
+      resources:
+        limits: { memory: 256M }
+    restart: unless-stopped
+    depends_on: [prometheus]
+
+# Prometheus config with compose-time secrets. The API is scraped on its private METRICS_ADDR listener (api:9090, set in
+# Backend/.env.example and docker-compose.prod.yml), which needs no token inside the compose network; the EMQX endpoint
+# needs an API key (the same one the API uses, Backend/docker-compose.yml).
+configs:
+  prometheus_conf:
+    content: |
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 30s
+      rule_files:
+        - /etc/prometheus/rules/*.yml
+      scrape_configs:
+        - job_name: api
+          metrics_path: /metrics
+          static_configs: [{ targets: ["api:9090"] }]
+        - job_name: worker
+          static_configs: [{ targets: ["worker:9090"] }]
+        - job_name: emqx
+          metrics_path: /api/v5/prometheus/stats
+          basic_auth:
+            username: ${EMQX_API_KEY:-iwillbegoogler-api}
+            password: ${EMQX_API_SECRET:-dev-emqx-api-secret-change-me-0123456789}
+          static_configs: [{ targets: ["emqx:18083"] }]
+        - job_name: postgres
+          static_configs: [{ targets: ["postgres-exporter:9187"] }]
+        - job_name: redis
+          static_configs: [{ targets: ["redis-exporter:9121"] }]
+
+volumes:
+  prometheusdata:
+  grafanadata:

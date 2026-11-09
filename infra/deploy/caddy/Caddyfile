@@ -1,0 +1,116 @@
+# Edge proxy: automatic HTTPS (Let's Encrypt) for the site and the admin panel.
+# Env (from .env.prod via docker-compose.prod.yml): DOMAIN, ADMIN_DOMAIN, ACME_EMAIL, ADMIN_ALLOW_CIDRS, PORT.
+{
+	email {$ACME_EMAIL}
+	# Behind the host nginx (SITE_SCHEME=http://), the client IP comes from its X-Real-IP; direct, clients are never
+	# in private ranges, so nothing can be spoofed.
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers X-Real-IP X-Forwarded-For
+	}
+}
+
+(security) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(self), geolocation=()"
+		-Server
+	}
+}
+
+# Public site: / -> web (nginx SPA + bot prerender), /api -> api, /mqtt -> emqx WebSocket.
+{$SITE_SCHEME}{$DOMAIN} {
+	import security
+
+	# EMQX -> API auth/ACL calls stay on the compose network; never reachable from outside.
+	@internal path /api/internal /api/internal/*
+	handle @internal {
+		respond "not found" 404
+	}
+
+	# Server-Sent Events: no buffering, no compression, long-lived.
+	@stream path_regexp stream ^/api/.+/stream$
+	handle @stream {
+		reverse_proxy api:{$PORT:8080} {
+			flush_interval -1
+			header_up X-Real-IP {client_ip}
+			transport http {
+				read_timeout 1h
+			}
+		}
+	}
+
+	# Diagram realtime: MQTT 5 over WebSocket (Upgrade is handled by Caddy).
+	handle /mqtt {
+		reverse_proxy emqx:8083 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+
+	# Prometheus: the API itself requires "Authorization: Bearer $METRICS_TOKEN" (404 when the token is unset).
+	handle /metrics {
+		reverse_proxy api:{$PORT:8080} {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+
+	handle /api/* {
+		request_body {
+			max_size 110MB
+		}
+		encode zstd gzip
+		reverse_proxy api:{$PORT:8080} {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+
+	# Host page of live HTML blocks in stories: it carries its own sandbox CSP (set by Web/nginx.conf). This handle must come
+	# before the catch-all below, which replaces the CSP of every other path, and sets no header and drops none, so nginx's passes through.
+	@htmlframe path /html-frame.html
+	handle @htmlframe {
+		encode zstd gzip
+		reverse_proxy web:80 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+
+	handle {
+		encode zstd gzip
+		# Same policy as Web/nginx.conf, plus wss: for the same-origin /mqtt WebSocket. Replaces nginx's header.
+		header Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http:; connect-src 'self' wss://{$DOMAIN}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; worker-src 'self' blob:"
+		header Cross-Origin-Opener-Policy "same-origin"
+		reverse_proxy web:80 {
+			header_up X-Real-IP {client_ip}
+			header_down -Content-Security-Policy
+			header_down -Cross-Origin-Opener-Policy
+		}
+	}
+}
+
+# Admin panel, optionally limited to ADMIN_ALLOW_CIDRS (space separated; default: anyone).
+{$SITE_SCHEME}{$ADMIN_DOMAIN} {
+	import security
+
+	@denied not client_ip {$ADMIN_ALLOW_CIDRS:0.0.0.0/0 ::/0}
+	handle @denied {
+		respond "forbidden" 403
+	}
+
+	@internal path /api/internal /api/internal/*
+	handle @internal {
+		respond "not found" 404
+	}
+
+	handle {
+		encode zstd gzip
+		header X-Frame-Options "DENY"
+		request_body {
+			max_size 8MB
+		}
+		reverse_proxy admin:80 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+}
