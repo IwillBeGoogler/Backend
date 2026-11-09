@@ -158,7 +158,7 @@ func TestParseUmlDiagnostics(t *testing.T) {
 		// bad nested contexts and EOF in blocks
 		{"unclosed class", blk("classes", "class A {"), "missing"},
 		{"unclosed class real", "classes {\nclass A {", `class "A"`},
-		{"member junk long", blk("classes", "class A {", "  + name " + strings.Repeat("x", 40), "}"), "after the member name"},
+		{"member junk long", blk("classes", "class A {", "  + name "+strings.Repeat("x", 40), "}"), "after the member name"},
 		{"param weird", blk("classes", "class A {", "  + f(:x, y): R", "}"), ""},
 		{"rel attr junk", blk("classes", "class A", "class B", `A --|> B (`, `A --|> B , x=1`), "unexpected"},
 		{"generics then bad string", blk("classes", `class A<"x> "y`), "unterminated string"},

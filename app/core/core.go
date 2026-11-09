@@ -44,6 +44,7 @@ type Services struct {
 	Accounts  *application.Accounts
 	Diagrams  *application.Diagrams
 	Analytics *application.Analytics // nil unless cfg.Analytics
+	SiteStats *application.SiteStats
 
 	close []func()
 }
@@ -233,6 +234,8 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 		}
 		return out
 	})
+	s.Diagrams.Views = redis.DiagramViews{RDB: rdb}
+	s.SiteStats = application.NewSiteStats(postgres.NewSiteStatsRepo(db), redis.Views{RDB: rdb}, s.Diagrams.Views, guardauth.Authorizer{G: g})
 	s.Diagrams.Notices = blog // comment notifications ride the blog's notification system and its live stream
 
 	if cfg.Analytics {

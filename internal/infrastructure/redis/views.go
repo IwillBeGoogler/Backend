@@ -117,3 +117,28 @@ func (v Views) Daily(ctx context.Context, postID int, days []time.Time) ([]int64
 	}
 	return out, nil
 }
+
+// DailyTotals returns the first-time unique views of all posts on each day.
+func (v Views) DailyTotals(ctx context.Context, days []time.Time) ([]int64, error) {
+	return dailyTotals(ctx, v.RDB, dayKey, days)
+}
+
+// dailyTotals sums the scores of one daily sorted set per day.
+func dailyTotals(ctx context.Context, rdb *redis.Client, key func(time.Time) string, days []time.Time) ([]int64, error) {
+	pipe := rdb.Pipeline()
+	cmds := make([]*redis.ZSliceCmd, len(days))
+	for i, d := range days {
+		cmds[i] = pipe.ZRangeWithScores(ctx, key(d), 0, -1)
+	}
+	if _, err := pipe.Exec(ctx); err != nil && err != redis.Nil {
+		return nil, err
+	}
+	out := make([]int64, len(days))
+	for i, c := range cmds {
+		zs, _ := c.Result()
+		for _, z := range zs {
+			out[i] += int64(z.Score)
+		}
+	}
+	return out, nil
+}

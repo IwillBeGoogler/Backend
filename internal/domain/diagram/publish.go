@@ -64,6 +64,9 @@ type Listing struct {
 	UpdatedAt     time.Time
 	// Claps is the total claps of all readers.
 	Claps int
+	// Views is the unique viewers; the application fills it from the view
+	// counter, the repository leaves it zero.
+	Views int64
 
 	AuthorID       int
 	AuthorUsername string

@@ -97,9 +97,37 @@ func (d *Diagrams) BookmarkedDiagrams(ctx context.Context, actor int, p domain.P
 		return out, nil
 	}
 	items, total, err := d.Engage.ListBookmarked(ctx, actor, p.Page, p.Limit)
+	d.withViews(ctx, items)
 	if items != nil {
 		out.Items = items
 	}
 	out.Total = total
 	return out, err
+}
+
+// ViewDiagram counts a unique view of a published (public or unlisted)
+// file by viewer (user id or IP). A private or unknown slug is not found.
+func (d *Diagrams) ViewDiagram(ctx context.Context, slug, viewer string) error {
+	ctx, span := tracer.Start(ctx, "Diagrams.ViewDiagram")
+	defer span.End()
+	l, err := d.published(ctx, slug)
+	if err != nil || d.Views == nil {
+		return err
+	}
+	return d.Views.Hit(ctx, l.FileID, viewer)
+}
+
+// withViews fills Views of listings from the view counter.
+func (d *Diagrams) withViews(ctx context.Context, ls []diagram.Listing) {
+	if d.Views == nil || len(ls) == 0 {
+		return
+	}
+	ids := make([]string, len(ls))
+	for i, l := range ls {
+		ids[i] = l.FileID
+	}
+	counts := d.Views.Counts(ctx, ids)
+	for i := range ls {
+		ls[i].Views = counts[ls[i].FileID]
+	}
 }

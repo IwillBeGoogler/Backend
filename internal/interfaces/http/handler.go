@@ -53,6 +53,8 @@ type Deps struct {
 	Tickets application.ResetTokens
 	// Analytics records product events (nil disables tracking).
 	Analytics *application.Analytics
+	// SiteStats serves the site statistics (nil disables them).
+	SiteStats *application.SiteStats
 	// Captcha verifies a signup CAPTCHA token (nil: no CAPTCHA).
 	Captcha func(ctx context.Context, token, remoteIP string) error
 	// CaptchaSiteKey is the public Turnstile key the client renders with.
@@ -210,6 +212,8 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/admin/users/{username}/ban", h.unbanUser)
 	mux.HandleFunc("GET /api/admin/comments", h.adminComments)
 	mux.HandleFunc("GET /api/admin/stats", h.stats)
+	mux.HandleFunc("GET /api/admin/stats/site", h.adminSiteStats)
+	mux.HandleFunc("GET /api/stats/site", h.siteStats)
 	mux.HandleFunc("GET /api/admin/reports", h.adminReports)
 	mux.HandleFunc("PUT /api/admin/reports/{id}", h.decideReport)
 	mux.HandleFunc("POST /api/reports", h.createReport)

@@ -17,6 +17,7 @@ import (
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 )
 
 func (h *Handler) publishRoutes(mux dgRouter) {
@@ -31,6 +32,7 @@ func (h *Handler) publishRoutes(mux dgRouter) {
 	mux.HandleFunc("GET /api/users/{username}/diagrams", h.userDiagrams)
 
 	mux.HandleFunc("GET "+p+"/public/{slug}/me", h.publicDiagramMe)
+	mux.HandleFunc("POST "+p+"/public/{slug}/view", h.viewDiagram)
 	mux.HandleFunc("POST "+p+"/public/{slug}/clap", h.clapDiagram)
 	mux.HandleFunc("POST "+p+"/public/{slug}/bookmark", h.bookmarkDiagram)
 	mux.HandleFunc("DELETE "+p+"/public/{slug}/bookmark", h.unbookmarkDiagram)
@@ -205,6 +207,7 @@ type publicDiagramJSON struct {
 	PageCount    int             `json:"page_count"`
 	ThumbnailURL *string         `json:"thumbnail_url"`
 	Claps        int             `json:"claps"`
+	Views        int64           `json:"views"`
 	PublishedAt  string          `json:"published_at"`
 	UpdatedAt    string          `json:"updated_at"`
 	Author       publicAuthor    `json:"author"`
@@ -217,7 +220,7 @@ func publicJSON(l diagram.Listing) publicDiagramJSON {
 		tags = []string{}
 	}
 	return publicDiagramJSON{FileID: l.FileID, Slug: l.Slug, URL: PublicDiagramPath + l.Slug, Title: l.Title, Description: l.Description,
-		Tags: tags, Visibility: string(l.Visibility), Kind: l.Kind, PageCount: l.PageCount, ThumbnailURL: assetThumb(l.ThumbnailHash), Claps: l.Claps,
+		Tags: tags, Visibility: string(l.Visibility), Kind: l.Kind, PageCount: l.PageCount, ThumbnailURL: assetThumb(l.ThumbnailHash), Claps: l.Claps, Views: l.Views,
 		PublishedAt: rfc3339(l.PublishedAt), UpdatedAt: rfc3339(l.UpdatedAt),
 		Author: publicAuthor{l.AuthorID, l.AuthorUsername, l.AuthorName, l.AuthorAvatar}}
 }
@@ -469,4 +472,29 @@ func (h *Handler) myDiagramBookmarks(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	writeJSON(w, http.StatusOK, publicDiagramPage{page})
+}
+
+// viewDiagram counts a unique view of a published diagram, like a post's:
+// one per signed-in user or IP. The public page is cached, so the client
+// calls this when it opens a diagram.
+//
+// Response: 204. 404 for an unknown or private slug. Rate limit: 120 per
+// minute. Auth: optional.
+//
+// spector:tags diagrams
+func (h *Handler) viewDiagram(w http.ResponseWriter, r *http.Request) {
+	if !h.allow(w, r, "view", 120, time.Minute) {
+		return
+	}
+	viewer := "ip:" + h.clientIP(r)
+	if uid := h.viewerID(r); uid != 0 {
+		viewer = "user:" + strconv.Itoa(uid)
+	}
+	// A view counter must not flush every cached response.
+	middleware.SkipInvalidate(r.Context())
+	if err := h.Diagrams.ViewDiagram(r.Context(), r.PathValue("slug"), viewer); err != nil {
+		diagramProblem(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

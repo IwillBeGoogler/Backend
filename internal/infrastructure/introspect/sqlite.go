@@ -226,8 +226,8 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 				to := f.to.String
 				if !f.to.Valid || to == "" {
 					to = "id"
-					if len(pkCols) > 0 {
-						to = pkCols[0]
+					if pk := sqliteFirstPK(ctx, db, f.table); pk != "" {
+						to = pk
 					}
 				}
 				fk := &diagram.SchemaFK{Table: f.table, Column: to}
@@ -252,4 +252,28 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 		tables = append(tables, diagram.SchemaTable{Name: o.name, Kind: kind, Columns: columns, Indexes: indexes, Checks: []diagram.SchemaCheck{}})
 	}
 	return diagram.Introspected{Schema: diagram.Schema{Tables: tables, Enums: []diagram.SchemaEnum{}}, Warnings: nonNil(warnings)}, nil
+}
+
+// sqliteFirstPK returns the first primary-key column of table, or "" when
+// it has none or cannot be read. An implicit FK target (REFERENCES parent)
+// points at the parent's primary key, not the referencing table's.
+func sqliteFirstPK(ctx context.Context, db *sql.DB, table string) string {
+	r, err := db.QueryContext(ctx, `pragma table_info(`+quoteIdent(table)+`)`)
+	if err != nil {
+		return ""
+	}
+	defer r.Close()
+	best, name := 0, ""
+	for r.Next() {
+		var cid, notnull, pk int
+		var n, typ string
+		var dflt sql.NullString
+		if err := r.Scan(&cid, &n, &typ, &notnull, &dflt, &pk); err != nil {
+			return ""
+		}
+		if pk > 0 && (best == 0 || pk < best) {
+			best, name = pk, n
+		}
+	}
+	return name
 }

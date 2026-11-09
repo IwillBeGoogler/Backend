@@ -80,6 +80,9 @@ type Diagrams struct {
 	// SchemaDump renders the app's own database schema as DDL for
 	// AdminSchemaSQL (nil: the route answers 404).
 	SchemaDump func(ctx context.Context, prefix string) (string, error)
+	// Views counts unique views of published files (nil: views are off and
+	// read as zero).
+	Views DiagramViewCounter
 	// Templates is the template gallery (nil: no gallery).
 	Templates diagram.TemplateRepository
 	// Authz checks the admin permissions (diagrams.read, diagrams.manage,

@@ -114,6 +114,9 @@ func (d *Diagrams) PublicDiagram(ctx context.Context, slug string) (diagram.Publ
 		return diagram.PublicDoc{}, diagram.NotFound("Diagram")
 	}
 	doc, err := d.Publish.PublicBySlug(ctx, slug)
+	if err == nil && d.Views != nil {
+		doc.Views = d.Views.Count(ctx, doc.FileID)
+	}
 	return doc, notFoundAs(err, "Diagram")
 }
 
@@ -181,6 +184,7 @@ func (d *Diagrams) listPublic(ctx context.Context, q diagram.PublicQuery) (Publi
 		return page, diagram.Validation("q: at most 100 characters")
 	}
 	items, total, err := d.Publish.ListPublic(ctx, q)
+	d.withViews(ctx, items)
 	if items != nil {
 		page.Items = items
 	}

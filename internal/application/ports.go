@@ -63,6 +63,19 @@ type ViewCounter interface {
 	Trending(ctx context.Context, days, limit int) ([]int, error)
 	// Daily returns unique views of the post on each of days (UTC).
 	Daily(ctx context.Context, postID int, days []time.Time) ([]int64, error)
+	// DailyTotals returns unique views of all posts on each of days (UTC).
+	DailyTotals(ctx context.Context, days []time.Time) ([]int64, error)
+}
+
+// DiagramViewCounter counts unique views of published diagrams.
+type DiagramViewCounter interface {
+	// Hit counts viewer once per file; viewer is a user or IP key.
+	Hit(ctx context.Context, fileID, viewer string) error
+	Count(ctx context.Context, fileID string) int64
+	// Counts is Count for many files in one round trip.
+	Counts(ctx context.Context, fileIDs []string) map[string]int64
+	// DailyTotals returns unique views of all diagrams on each of days (UTC).
+	DailyTotals(ctx context.Context, days []time.Time) ([]int64, error)
 }
 
 // ThumbKey is the storage key of an upload's thumbnail.

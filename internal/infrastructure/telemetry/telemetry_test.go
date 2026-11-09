@@ -3,8 +3,14 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+
+	"go.opentelemetry.io/otel"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -126,5 +132,75 @@ func TestEndRecordsError(t *testing.T) {
 	}
 	if spans[1].Status().Description != "" {
 		t.Errorf("ok span status = %+v", spans[1].Status())
+	}
+}
+
+func TestSetupEnabledExportsToCollector(t *testing.T) {
+	var mu sync.Mutex
+	paths := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.Copy(io.Discard, r.Body)
+		mu.Lock()
+		paths[r.URL.Path]++
+		mu.Unlock()
+	}))
+	defer srv.Close()
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", srv.URL)
+	t.Setenv("OTEL_SERVICE_NAME", "telemetry-test")
+
+	origTransport := http.DefaultTransport
+	origTracer, origMeter, origProp := otel.GetTracerProvider(), otel.GetMeterProvider(), otel.GetTextMapPropagator()
+	t.Cleanup(func() {
+		http.DefaultTransport = origTransport
+		otel.SetTracerProvider(origTracer)
+		otel.SetMeterProvider(origMeter)
+		otel.SetTextMapPropagator(origProp)
+	})
+
+	if !Enabled() {
+		t.Fatal("not enabled")
+	}
+	shutdown, err := Setup(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if http.DefaultTransport == origTransport {
+		t.Error("default transport not instrumented")
+	}
+
+	// A span, a metric and a log record all flush on shutdown.
+	ctx, span := otel.Tracer("t").Start(context.Background(), "op")
+	span.End()
+	_, s2 := Start(ctx, "inner")
+	End(s2, errors.New("x"))
+	l := NewLogger() // OTel enabled: tee with the OTLP core
+	l.Info("hello", zap.Any("ctx", ctx))
+	_ = l.Sync()
+	if err := shutdown(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if paths["/v1/traces"] == 0 {
+		t.Errorf("no trace export, got %v", paths)
+	}
+}
+
+func TestSetupBadResourceAttributes(t *testing.T) {
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:1")
+	t.Setenv("OTEL_RESOURCE_ATTRIBUTES", "no-equals-sign")
+	if _, err := Setup(context.Background()); err == nil {
+		t.Skip("this SDK version tolerates malformed OTEL_RESOURCE_ATTRIBUTES")
+	}
+}
+
+func TestTraceCoreCheckSkipsDisabledLevels(t *testing.T) {
+	obs, _ := observer.New(zap.InfoLevel)
+	c := traceCore{obs}
+	if ce := c.Check(zapcore.Entry{Level: zapcore.DebugLevel}, nil); ce != nil {
+		t.Error("debug entry was checked in")
+	}
+	if ce := c.Check(zapcore.Entry{Level: zapcore.InfoLevel}, nil); ce == nil {
+		t.Error("info entry was dropped")
 	}
 }

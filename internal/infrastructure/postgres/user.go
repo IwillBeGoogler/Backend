@@ -190,7 +190,7 @@ func (r *UserRepo) Purge(ctx context.Context, id int, cutoff time.Time) (bool, e
 	var purged bool
 	err := pgx.BeginFunc(ctx, r.db, func(tx pgx.Tx) error {
 		var due bool
-		err := tx.QueryRow(ctx, `SELECT deleted_at <= $2 FROM users WHERE id = $1 FOR UPDATE`, id, cutoff).Scan(&due)
+		err := tx.QueryRow(ctx, `SELECT COALESCE(deleted_at <= $2, false) FROM users WHERE id = $1 FOR UPDATE`, id, cutoff).Scan(&due)
 		if err != nil || !due {
 			return ignoreNoRows(err)
 		}

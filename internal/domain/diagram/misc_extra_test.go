@@ -139,7 +139,6 @@ func TestCleanTemplateControlChars(t *testing.T) {
 	}
 }
 
-
 func TestScrubPrivateBadPages(t *testing.T) {
 	raw := json.RawMessage(`{"pages":5}`)
 	out, by, n := diagram.ScrubPrivate(raw, func(string) bool { return true }, "u")

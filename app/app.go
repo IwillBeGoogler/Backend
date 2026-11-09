@@ -244,6 +244,7 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 		Schema:           schema,
 
 		Analytics:      s.Analytics,
+		SiteStats:      s.SiteStats,
 		Captcha:        verifyCaptcha,
 		CaptchaSiteKey: cfg.TurnstileSiteKey,
 		SiteName:       cfg.SiteName,
