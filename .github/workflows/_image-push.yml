@@ -2,8 +2,9 @@ name: image-push
 
 # Reusable: loads the scanned tarballs and pushes <IMAGE_NAME>-<target>:<tag>.
 # Only the immutable sha tag: deploys and rollbacks never depend on :latest.
-# Environment vars: DOCKERHUB_USERNAME, IMAGE_NAME.
-# Environment secrets: DOCKERHUB_TOKEN.
+# Docker Hub credentials come from Vault (GitHub OIDC, JWT auth), not GitHub secrets:
+# kv/data/ci/dockerhub keys username, token. Needs repo/org var VAULT_ADDR.
+# The caller must grant `id-token: write`.
 on:
   workflow_call:
     inputs:
@@ -11,13 +12,15 @@ on:
       tag: { type: string, required: true, description: image tag (short sha) }
       targets: { type: string, required: true, description: 'JSON array of Dockerfile stages, e.g. ["api","worker"]' }
       app-name: { type: string, required: true, description: local image and artifact prefix }
+      image-name: { type: string, default: docker.io/bakhod1r/iwillbegoogler, description: "registry image prefix; pushes <image-name>-<target>:<tag>" }
+      vault-role: { type: string, default: iwillbegoogler-production-ci-images, description: Vault JWT role }
+      vault-secret-path: { type: string, default: kv/data/ci/dockerhub, description: Vault KV v2 path with username and token }
       runner: { type: string, default: ubuntu-24.04, description: runner label }
       timeout-minutes: { type: number, default: 10, description: job timeout }
-    secrets:
-      DOCKERHUB_TOKEN: { required: true }
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   push:
@@ -40,17 +43,31 @@ jobs:
           name: ${{ inputs.app-name }}-${{ matrix.target }}
           path: ${{ runner.temp }}
 
+      - name: Vault secrets
+        id: vault
+        uses: hashicorp/vault-action@v3.4.0
+        with:
+          url: ${{ vars.VAULT_ADDR }}
+          method: jwt
+          jwtGithubAudience: iwillbegoogler-vault
+          role: ${{ inputs.vault-role }}
+          exportEnv: false
+          secrets: |
+            ${{ inputs.vault-secret-path }} username | DOCKERHUB_USERNAME ;
+            ${{ inputs.vault-secret-path }} token | DOCKERHUB_TOKEN
+
       - name: Docker login
         uses: docker/login-action@v4.6.0
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ steps.vault.outputs.DOCKERHUB_USERNAME }}
+          password: ${{ steps.vault.outputs.DOCKERHUB_TOKEN }}
 
       - name: Docker push
         env:
           TARBALL: ${{ runner.temp }}/${{ matrix.target }}.tar
           LOCAL: ${{ inputs.app-name }}-${{ matrix.target }}:${{ github.sha }}
-          IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+          IMAGE_NAME: ${{ inputs.image-name }}
           TARGET: ${{ matrix.target }}
           TAG: ${{ inputs.tag }}
           ENVIRONMENT: ${{ inputs.environment }}

@@ -63,3 +63,11 @@ func TestQuoteIdent(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderIndexComment(t *testing.T) {
+	got := Render(Schema{Tables: []Table{{Name: "t", Columns: []Column{{Name: "a", Type: "int"}},
+		Indexes: []Index{{Name: "t_a_idx", Def: "CREATE INDEX t_a_idx ON public.t USING btree (a);", Comment: "fast"}}}}})
+	if !strings.Contains(got, "CREATE INDEX t_a_idx ON public.t USING btree (a);\n") || !strings.Contains(got, "COMMENT ON INDEX t_a_idx IS 'fast';\n") {
+		t.Errorf("got:\n%s", got)
+	}
+}

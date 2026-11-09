@@ -1,59 +1,45 @@
 name: CD
 
-# Deploys after a PR is merged: dev -> dev environment, main -> production.
-# GitHub has no merge event: a merged PR is a push to its base branch, so CD
-# triggers on push. CI gates the PR; branch protection keeps direct pushes out.
-# Each environment has its own vars/secrets (own server, own settings).
-#   meta -> build -> scan -> push --\
-#        \-> env -------------------+-> deploy -> notify
-# Jobs are reusable workflows (_*.yml, defaults in their inputs); this file
-# passes only what is specific to this service. Long steps are plain scripts in ../scripts/.
+# Release pipeline for main: build -> scan -> push images, then hand the
+# deploy to the infra repo. Production runs docker compose from
+# bakhod1r/iwillbegoogler-infra (env rendered from Vault on the server); this
+# repo no longer touches the server. _deploy.yml and _env.yml (SSH deploy) are
+# kept but unused here: dev-only legacy.
+#   meta -> build -> scan -> push -> deploy (repository_dispatch to infra) -> notify
+# Images: docker.io/bakhod1r/iwillbegoogler-{migrate,api,worker}:<short sha>
 #
-# Repository var: APP_NAME (image/artifact/container prefix, e.g. iwillbegoogler).
-# GitHub environments (same names, different values):
-#   vars:    SERVER_HOST, SERVER_USER, DEPLOY_DIR, DOCKER_NETWORK, DOCKERHUB_USERNAME, IMAGE_NAME,
-#            TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID (optional), CREDS_CMD (systemd-creds only)
-#   secrets: SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS (ssh-keyscan output, checked once by hand),
-#            DOCKERHUB_TOKEN, APP_SECRETS (dotenv text; incl. SMTP_PASSWORD, EMQX_API_SECRET, MQTT_PASSWORD,
-#            MQTT_INTERNAL_SECRET), TELEGRAM_BOT_TOKEN
-# Server: docker, deploy user in the docker group, registry login, the DOCKER_NETWORK network
-# with postgres/redis/minio (see _deploy.yml).
+# Secrets come from Vault via GitHub OIDC (JWT auth), none from GitHub secrets
+# except the optional TELEGRAM_BOT_TOKEN:
+#   role iwillbegoogler-production-ci-images
+#   kv/data/ci/dockerhub  username, token   (push)
+#   kv/data/ci/github     dispatch_token    (dispatch)
+# Repo/org vars: APP_NAME (e.g. iwillbegoogler), VAULT_ADDR, TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID (optional).
 on:
   push:
     # Literal on purpose: GitHub does not evaluate expressions in triggers.
-    branches: [main, dev]
-  # Manual run: redeploy the branch HEAD, or roll back to an existing tag.
+    branches: [main]
+  # Manual run: rebuild branch HEAD, or roll back by dispatching an existing tag.
   workflow_dispatch:
     inputs:
       rollback-tag:
-        description: "Roll back: deploy this existing image tag (short sha, e.g. 8d777fa); skips build, scan and push. Empty = normal deploy."
+        description: "Roll back: dispatch a deploy of this existing image tag (short sha, e.g. 8d777fa); skips build, scan and push. Empty = normal release."
         type: string
         default: ""
-      rollback-migrations:
-        description: "With rollback-tag: also roll the DB schema back (goose down to the old image's newest migration). DESTRUCTIVE: data in columns/tables added since is lost."
-        type: boolean
-        default: false
 
-# One lock per environment: dev and production deploy independently, but two
-# runs never hit the same server at once. Must match _meta.yml's mapping.
-# Never cancel a deploy mid-way.
+# Never cancel a release mid-way.
 concurrency:
-  group: cd-${{ github.ref_name == 'main' && 'production' || 'dev' }}
+  group: cd-production
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  # Run-wide values, computed once: target environment, image tag, version,
-  # and whether this run is a manual rollback.
-  # Manual runs only from main or dev: a feature branch must not reach dev.
   meta:
-    if: github.ref_name == 'main' || github.ref_name == 'dev'
+    if: github.ref_name == 'main'
     uses: ./.github/workflows/_meta.yml
     with:
       rollback-tag: ${{ inputs.rollback-tag }}
-      rollback-migrations: ${{ inputs.rollback-migrations || false }}
 
   # build -> scan -> push are skipped on a rollback: the image already exists.
   build:
@@ -63,7 +49,7 @@ jobs:
     with:
       version: ${{ needs.meta.outputs.version }}
       targets: &targets '["migrate","api","worker"]' # Dockerfile stages
-      app-name: &app-name ${{ vars.APP_NAME }} # local image/artifact prefix
+      app-name: &app-name ${{ vars.APP_NAME }}
       artifact: true
       fail-fast: true
 
@@ -77,58 +63,59 @@ jobs:
   # Only after every image passed the scan, so a release is all or nothing.
   push:
     needs: [meta, scan]
+    permissions:
+      contents: read
+      id-token: write # Vault JWT login
     uses: ./.github/workflows/_image-push.yml
     with:
       environment: &environment ${{ needs.meta.outputs.environment }}
       tag: &tag ${{ needs.meta.outputs.tag }}
       targets: *targets
       app-name: *app-name
-    secrets:
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  # App settings on the server; parallel to build/scan/push, so missing
-  # settings fail the run before deploy starts.
-  env:
-    needs: meta
-    uses: ./.github/workflows/_env.yml
-    with:
-      environment: *environment
-      source: github # APP_SECRETS environment secret
-      delivery: files # secret keys as files, app reads KEY_FILE
-      secret-keys: >-
-        DATABASE_URL REDIS_URL S3_ACCESS_KEY S3_SECRET_KEY MFA_KEY
-        UNSUBSCRIBE_KEY AUDIT_EMAIL_KEY METRICS_TOKEN DOCS_KEY TURNSTILE_SECRET
-        SMTP_PASSWORD EMQX_API_SECRET MQTT_PASSWORD MQTT_INTERNAL_SECRET
-      required-keys: >-
-        APP_ENV DATABASE_URL REDIS_URL S3_ENDPOINT S3_ACCESS_KEY S3_SECRET_KEY
-        S3_BUCKET MFA_KEY UNSUBSCRIBE_KEY AUDIT_EMAIL_KEY SITE_URL PUBLIC_URL
-        SMTP_ADDR MAIL_FROM
-    secrets:
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-      APP_SECRETS: ${{ secrets.APP_SECRETS }}
-
-  # Plain docker on the server: migrate, then replace api/worker, rollback on failure.
-  # Runs after a successful push, or straight after env on a manual rollback.
+  # Tell the infra repo to roll out <tag>. Runs after a successful push, or
+  # straight after meta on a manual rollback. Job id stays `deploy` (notify reads it).
   deploy:
-    needs: [meta, push, env]
+    needs: [meta, push]
     if: >-
-      always() && needs.meta.result == 'success' && needs.env.result == 'success' &&
+      always() && needs.meta.result == 'success' &&
       (needs.push.result == 'success' || needs.meta.outputs.rollback == 'true')
-    uses: ./.github/workflows/_deploy.yml
-    with:
-      environment: *environment
-      tag: *tag
-      migrate-service: migrate
-      migrate-mode: ${{ needs.meta.outputs.migrate-mode }} # up | skip | down, see meta.sh
-      app-services: api worker
-      container-prefix: ${{ vars.APP_NAME }}-
-    secrets:
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: ${{ needs.meta.outputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Vault secrets
+        id: vault
+        uses: hashicorp/vault-action@v3.4.0
+        with:
+          url: ${{ vars.VAULT_ADDR }}
+          method: jwt
+          jwtGithubAudience: iwillbegoogler-vault
+          role: iwillbegoogler-production-ci-images
+          exportEnv: false
+          secrets: |
+            kv/data/ci/github dispatch_token | DISPATCH_TOKEN
+
+      - name: Dispatch deploy
+        env:
+          DISPATCH_TOKEN: ${{ steps.vault.outputs.DISPATCH_TOKEN }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -cn --arg tag "$TAG" '{event_type: "deploy", client_payload: {service: "backend", tag: $tag}}')
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $DISPATCH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/bakhod1r/iwillbegoogler-infra/dispatches \
+            -d "$payload"
+          echo "::notice::Dispatched deploy backend:$TAG to iwillbegoogler-infra"
 
   notify:
-    needs: [meta, build, scan, push, env, deploy]
+    needs: [meta, build, scan, push, deploy]
     if: always() && needs.meta.result == 'success'
     uses: ./.github/workflows/_notify.yml
     with:
@@ -137,7 +124,7 @@ jobs:
       results: ${{ toJSON(needs) }}
       tag: *tag
       branch: ${{ github.ref_name }}
-      title: ${{ needs.meta.outputs.rollback == 'true' && format('rollback to {0}', inputs.rollback-tag) || github.event.head_commit.message || 'manual deploy' }}
+      title: ${{ needs.meta.outputs.rollback == 'true' && format('rollback to {0}', inputs.rollback-tag) || github.event.head_commit.message || 'manual release' }}
       url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
     secrets:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
