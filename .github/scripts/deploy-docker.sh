@@ -115,11 +115,11 @@ replaced=()
 rollback() {
 	echo "rollout failed, restoring the previous containers" >&2
 	for s in "${replaced[@]}"; do
-		docker logs --tail 40 "iwillbegoogler-$s-1" >&2 || true
-		docker rm -f "iwillbegoogler-$s-1" >/dev/null 2>&1 || true
-		if docker inspect "iwillbegoogler-$s-1-old" >/dev/null 2>&1; then
-			docker rename "iwillbegoogler-$s-1-old" "iwillbegoogler-$s-1"
-			docker start "iwillbegoogler-$s-1" >/dev/null
+		docker logs --tail 40 "iwillbegoogler-$s" >&2 || true
+		docker rm -f "iwillbegoogler-$s" >/dev/null 2>&1 || true
+		if docker inspect "iwillbegoogler-$s-old" >/dev/null 2>&1; then
+			docker rename "iwillbegoogler-$s-old" "iwillbegoogler-$s"
+			docker start "iwillbegoogler-$s" >/dev/null
 		fi
 	done
 	exit 1
@@ -128,12 +128,14 @@ rollback() {
 start() { # service memory cpus extra-env...
 	local s=$1 mem=$2 cpus=$3
 	shift 3
-	local name=iwillbegoogler-$s-1
+	local name=iwillbegoogler-$s legacy=iwillbegoogler-$s-1 # legacy: name the compose stack gave it
+	docker rm -f "$name-old" >/dev/null 2>&1 || true
 	if docker inspect "$name" >/dev/null 2>&1; then
-		docker rm -f "$name-old" >/dev/null 2>&1 || true
 		docker rename "$name" "$name-old"
-		docker stop -t 30 "$name-old" >/dev/null
+	elif docker inspect "$legacy" >/dev/null 2>&1; then
+		docker rename "$legacy" "$name-old"
 	fi
+	if docker inspect "$name-old" >/dev/null 2>&1; then docker stop -t 30 "$name-old" >/dev/null; fi
 	replaced+=("$s")
 	docker run -d --name "$name" --network-alias "$s" --restart unless-stopped \
 		--memory "$mem" --cpus "$cpus" "${common[@]}" "${env_args[@]}" "$@" "$IMAGE_NAME-$s:$TAG" >/dev/null || rollback
@@ -144,7 +146,7 @@ start api 512m 1.5 -e WORKER=false
 start worker 384m 1
 echo "healthy: api worker @ $TAG"
 
-for s in "${replaced[@]}"; do docker rm -f "iwillbegoogler-$s-1-old" >/dev/null 2>&1 || true; done
+for s in "${replaced[@]}"; do docker rm -f "iwillbegoogler-$s-old" >/dev/null 2>&1 || true; done
 
 # 7. healthy: the old secret_ids can go
 while read -r acc; do
