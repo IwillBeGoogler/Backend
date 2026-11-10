@@ -10,6 +10,7 @@ on:
       results: { type: string, required: true, description: "toJSON(needs) of the caller" }
       tag: { type: string, default: "", description: "image tag (cd only)" }
       title: { type: string, default: "", description: "message line; default: PR title or commit message" }
+      health-url: { type: string, default: "", description: "cd: URL checked after a successful deploy (shown as healthz 200)" }
     secrets:
       TELEGRAM_BOT_TOKEN: { required: false }
 
@@ -22,6 +23,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     continue-on-error: true
+    permissions:
+      contents: read
+      actions: read # duration and the log of failed jobs
     environment:
       name: ${{ inputs.environment }}
       deployment: false
@@ -45,4 +49,8 @@ jobs:
           ACTOR: ${{ github.actor }}
           TITLE: ${{ inputs.title || github.event.pull_request.title || github.event.head_commit.message || 'manual run' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_URL: ${{ github.event.pull_request.html_url || format('{0}/{1}/commit/{2}', github.server_url, github.repository, github.sha) }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+          HEALTH_URL: ${{ inputs.health-url }}
         run: bash .github/scripts/notify.sh

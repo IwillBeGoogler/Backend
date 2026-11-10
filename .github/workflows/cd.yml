@@ -128,6 +128,7 @@ jobs:
       mode: cd
       results: ${{ toJSON(needs) }}
       tag: *tag
+      health-url: https://iwillbegoogler.uz/api/healthz
       title: ${{ needs.meta.outputs.rollback == 'true' && format('rollback to {0}', inputs.rollback-tag) || '' }}
     secrets:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
