@@ -5,9 +5,10 @@ on:
   workflow_call:
     inputs:
       packages: { type: string, default: ./..., description: Go packages to test }
-      test-flags: { type: string, default: -race -count=1 -covermode=atomic, description: "several flags, word-split on purpose" }
+      test-flags: { type: string, default: -race -count=1 -covermode=atomic -coverpkg=./..., description: "several flags, word-split on purpose; -coverpkg counts cross-package coverage" }
       coverage-file: { type: string, default: coverage.out, description: coverage profile path }
       coverage-artifact: { type: string, default: coverage, description: artifact name of the profile }
+      coverage-min: { type: number, default: 95, description: minimum total statement coverage in percent }
       retention-days: { type: number, default: 1, description: artifact retention }
       go-version-file: { type: string, default: go.mod, description: file setup-go reads the Go version from }
       runner: { type: string, default: ubuntu-24.04, description: runner label }
@@ -35,6 +36,7 @@ jobs:
           PACKAGES: ${{ inputs.packages }}
           TEST_FLAGS: ${{ inputs.test-flags }}
           COVERAGE_FILE: ${{ inputs.coverage-file }}
+          COVERAGE_MIN: ${{ inputs.coverage-min }}
         run: bash .github/scripts/go-test.sh
 
       - name: Upload coverage

@@ -75,6 +75,9 @@ jobs:
   notify:
     needs: [lint, vuln, test, build, scan]
     if: always()
+    permissions:
+      contents: read
+      actions: read # _notify reads job results
     uses: ./.github/workflows/_notify.yml
     with:
       # PR into main -> production Telegram topic, anything else -> dev.

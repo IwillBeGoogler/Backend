@@ -7,3 +7,4 @@ go mod download
 go mod verify
 # shellcheck disable=SC2086 # TEST_FLAGS holds several flags
 go test $TEST_FLAGS -coverprofile="$COVERAGE_FILE" "$PACKAGES"
+bash "$(dirname "$0")/coverage-gate.sh"

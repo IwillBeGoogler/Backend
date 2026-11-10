@@ -114,6 +114,9 @@ jobs:
   notify:
     needs: [meta, build, scan, push, deploy]
     if: always() && needs.meta.result == 'success'
+    permissions:
+      contents: read
+      actions: read # _notify reads job results
     uses: ./.github/workflows/_notify.yml
     with:
       environment: *environment

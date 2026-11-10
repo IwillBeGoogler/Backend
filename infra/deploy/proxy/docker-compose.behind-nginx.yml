@@ -1,8 +1,0 @@
-# Added by deploy/server/deploy.sh when the rendered env has BEHIND_NGINX=1: the host nginx owns 80/443 (TLS via certbot,
-# deploy/proxy/nginx/*.conf) and forwards to Caddy on 127.0.0.1:8088, which keeps all routing and security headers.
-services:
-  caddy:
-    ports: !override
-      - "127.0.0.1:${CADDY_LOCAL_PORT:-8088}:80"
-    environment:
-      SITE_SCHEME: http://

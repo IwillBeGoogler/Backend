@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help deps run worker migrate build admin seed test test-all cover vet lint lint-fix actionlint fmt tidy openapi images up up-seed ps down reset logs generate golden
+.PHONY: help deps run worker migrate build admin seed test test-all cover cover-gate vet lint lint-fix actionlint fmt tidy openapi images up up-seed ps down reset logs generate golden
 
 BIN      ?= bin/app
 TAG      ?= dev
@@ -51,6 +51,9 @@ test-all: ## unit + integration tests (needs Docker)
 cover: ## unit + integration coverage across packages (needs Docker); writes coverage.out
 	go test -coverpkg=./... -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out | tail -1
+
+cover-gate: ## CI coverage gate: race tests + exclusions + >=COVERAGE_MIN% (needs Docker)
+	COVERAGE_FILE=coverage.out TEST_FLAGS='-race -count=1 -covermode=atomic -coverpkg=./...' PACKAGES=./... bash .github/scripts/go-test.sh
 
 vet: ## go vet
 	go vet ./...
