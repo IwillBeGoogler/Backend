@@ -75,17 +75,11 @@ jobs:
   notify:
     needs: [lint, vuln, test, build, scan]
     if: always()
-    permissions:
-      contents: read
-      actions: read # _notify reads job results
     uses: ./.github/workflows/_notify.yml
     with:
       # PR into main -> production Telegram topic, anything else -> dev.
       environment: ${{ github.base_ref == 'main' && 'production' || 'dev' }}
       mode: ci
       results: ${{ toJSON(needs) }}
-      branch: ${{ github.head_ref }} -> ${{ github.base_ref }}
-      title: ${{ github.event.pull_request.title }}
-      url: ${{ github.event.pull_request.html_url }}
     secrets:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

@@ -122,17 +122,12 @@ jobs:
   notify:
     needs: [meta, build, scan, push, deploy]
     if: always() && needs.meta.result == 'success'
-    permissions:
-      contents: read
-      actions: read # _notify reads job results
     uses: ./.github/workflows/_notify.yml
     with:
       environment: *environment
       mode: cd
       results: ${{ toJSON(needs) }}
       tag: *tag
-      branch: ${{ github.ref_name }}
-      title: ${{ needs.meta.outputs.rollback == 'true' && format('rollback to {0}', inputs.rollback-tag) || github.event.head_commit.message || 'manual release' }}
-      url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+      title: ${{ needs.meta.outputs.rollback == 'true' && format('rollback to {0}', inputs.rollback-tag) || '' }}
     secrets:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
