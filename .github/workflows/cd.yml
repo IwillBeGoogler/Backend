@@ -1,9 +1,9 @@
 name: CD
 
 # Release pipeline for main (production):
-#   meta -> build -> scan -> push (GHCR) -> deploy (self-hosted runner on the server, /opt/iwillbegoogler/deploy/server/ci-deploy.sh) -> notify
-# The stack (compose, Caddy, server scripts, Vault setup) already lives in /opt/iwillbegoogler on the server; Web and Admin
-# deploy their own service through the same runner and script. _deploy.yml and _env.yml (old SSH deploy) are unused legacy.
+#   meta -> build -> scan -> push (GHCR) -> deploy (self-hosted runner on the server, docker pull/run via .github/scripts/deploy-docker.sh) -> notify
+# Backend runs as plain `docker run` containers (api, worker; migrate one-shot) next to the existing stack; no compose files
+# are used. _deploy.yml and _env.yml (old SSH deploy) are unused legacy.
 # Images: ghcr.io/iwillbegoogler/iwillbegoogler-{migrate,api,worker}:<short sha>
 #
 # Push uses the workflow GITHUB_TOKEN (packages: write); the deploy job logs the server in to ghcr.io with the run's token
@@ -70,8 +70,8 @@ jobs:
       app-name: *app-name
 
   # Roll out <tag> on the server: self-hosted runner there (label iwillbegoogler-prod, deploy user). GitHub OIDC ->
-  # Vault role iwillbegoogler-<env>-ci -> ci-deploy.sh on the server: fresh
-  # wrapped secret_id, deploy.sh (migrate, health, automatic rollback), old secret_ids destroyed.
+  # Vault role iwillbegoogler-<env>-ci -> deploy-docker.sh: fresh wrapped secret_id, docker pull, migrate (docker run),
+  # api + worker replaced with docker run (health check, previous containers restored on failure), old secret_ids destroyed.
   # Runs after a successful push, or straight after meta on a manual rollback. Job id stays `deploy` (notify reads it).
   deploy:
     needs: [meta, push]
@@ -86,6 +86,12 @@ jobs:
       id-token: write
       packages: read # ghcr.io pull
     steps:
+      - name: Checkout deploy script
+        uses: actions/checkout@v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
       - name: Vault login (GitHub OIDC)
         uses: hashicorp/vault-action@v4.0.0
         with:
@@ -97,8 +103,6 @@ jobs:
           exportToken: true
 
       - name: GHCR login (pull)
-        # skipped on rollback: images already on the server (tags.history)
-        if: needs.meta.outputs.rollback != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_ACTOR: ${{ github.actor }}
@@ -107,9 +111,9 @@ jobs:
       - name: Deploy
         env:
           ENV_NAME: ${{ needs.meta.outputs.environment }}
-          SERVICE: backend
           TAG: ${{ needs.meta.outputs.tag }}
-        run: bash /opt/iwillbegoogler/deploy/server/ci-deploy.sh
+          IMAGE_NAME: ghcr.io/iwillbegoogler/iwillbegoogler
+        run: bash .github/scripts/deploy-docker.sh
 
       - name: GHCR logout
         if: always()
