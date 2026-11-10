@@ -1,13 +1,13 @@
 name: CD
 
 # Release pipeline for main (production):
-#   meta -> build -> scan -> push -> deploy (self-hosted runner on the server, infra/deploy/server/ci-deploy.sh) -> notify
-# The stack (compose, Caddy, server scripts, Vault setup) lives in infra/ of this repo; Web and Admin deploy their own
-# service through the same runner and script. _deploy.yml and _env.yml (old SSH deploy) are unused legacy.
-# Images: docker.io/bakhod1r/iwillbegoogler-{migrate,api,worker}:<short sha>
+#   meta -> build -> scan -> push (GHCR) -> deploy (self-hosted runner on the server, /opt/iwillbegoogler/deploy/server/ci-deploy.sh) -> notify
+# The stack (compose, Caddy, server scripts, Vault setup) already lives in /opt/iwillbegoogler on the server; Web and Admin
+# deploy their own service through the same runner and script. _deploy.yml and _env.yml (old SSH deploy) are unused legacy.
+# Images: ghcr.io/iwillbegoogler/iwillbegoogler-{migrate,api,worker}:<short sha>
 #
-# Secrets come from Vault via GitHub OIDC (JWT auth), none from GitHub secrets except the optional TELEGRAM_BOT_TOKEN:
-#   role iwillbegoogler-ci-images          kv/data/ci/dockerhub  username, token   (push)
+# Push uses the workflow GITHUB_TOKEN (packages: write); the deploy job logs the server in to ghcr.io with the run's token
+# (packages: read) for the pull, then logs out. Vault via GitHub OIDC (JWT auth) is used only for the deploy:
 #   role iwillbegoogler-production-ci      issue/destroy secret_ids of AppRole iwillbegoogler-production (deploy)
 # Repo/org vars: APP_NAME (e.g. iwillbegoogler), VAULT_ADDR, TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID (optional).
 on:
@@ -61,7 +61,7 @@ jobs:
     needs: [meta, scan]
     permissions:
       contents: read
-      id-token: write # Vault JWT login
+      packages: write # GHCR push with GITHUB_TOKEN
     uses: ./.github/workflows/_image-push.yml
     with:
       environment: &environment ${{ needs.meta.outputs.environment }}
@@ -70,7 +70,7 @@ jobs:
       app-name: *app-name
 
   # Roll out <tag> on the server: self-hosted runner there (label iwillbegoogler-prod, deploy user). GitHub OIDC ->
-  # Vault role iwillbegoogler-<env>-ci -> infra/deploy/server/ci-deploy.sh: syncs infra/ to the server, fresh
+  # Vault role iwillbegoogler-<env>-ci -> ci-deploy.sh on the server: fresh
   # wrapped secret_id, deploy.sh (migrate, health, automatic rollback), old secret_ids destroyed.
   # Runs after a successful push, or straight after meta on a manual rollback. Job id stays `deploy` (notify reads it).
   deploy:
@@ -84,15 +84,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: read # ghcr.io pull
     steps:
-      - name: Checkout stack files
-        uses: actions/checkout@v7.0.1
-        with:
-          sparse-checkout: |
-            infra
-            docker-compose.yml
-          sparse-checkout-cone-mode: false
-
       - name: Vault login (GitHub OIDC)
         uses: hashicorp/vault-action@v4.0.0
         with:
@@ -103,13 +96,24 @@ jobs:
           jwtGithubAudience: iwillbegoogler-vault
           exportToken: true
 
+      - name: GHCR login (pull)
+        # skipped on rollback: images already on the server (tags.history)
+        if: needs.meta.outputs.rollback != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTOR: ${{ github.actor }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+
       - name: Deploy
         env:
           ENV_NAME: ${{ needs.meta.outputs.environment }}
           SERVICE: backend
           TAG: ${{ needs.meta.outputs.tag }}
-          SRC: ${{ github.workspace }}
-        run: bash infra/deploy/server/ci-deploy.sh
+        run: bash /opt/iwillbegoogler/deploy/server/ci-deploy.sh
+
+      - name: GHCR logout
+        if: always()
+        run: docker logout ghcr.io || true
 
   notify:
     needs: [meta, build, scan, push, deploy]
