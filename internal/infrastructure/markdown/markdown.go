@@ -19,7 +19,9 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	mdhtml "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/util"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 )
@@ -61,14 +63,20 @@ func HasDiagramEmbed(body string) bool { return strings.Contains(body, "::diagra
 func New() *Renderer {
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
-		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+			parser.WithASTTransformers(util.Prioritized(codeTabsTransformer{}, 500)),
+		),
 		// Raw HTML passes through to the sanitizer, which has the last word.
-		goldmark.WithRendererOptions(mdhtml.WithUnsafe()),
+		goldmark.WithRendererOptions(
+			mdhtml.WithUnsafe(),
+			renderer.WithNodeRenderers(util.Prioritized(codeTabsRenderer{}, 500)),
+		),
 	)
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("id").Matching(regexp.MustCompile(`^[a-z0-9-]+$`)).OnElements("h1", "h2", "h3", "h4", "h5", "h6")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[\w+-]+$`)).OnElements("code")
-	p.AllowAttrs("class").Matching(regexp.MustCompile(`^embed$`)).OnElements("div")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(embed|code-tabs)$`)).OnElements("div")
 	// ::diagram embeds: <figure class="diagram-embed" data-file data-page>.
 	p.AllowElements("figure", "figcaption")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^diagram-embed$`)).OnElements("figure")

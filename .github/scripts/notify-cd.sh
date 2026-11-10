@@ -1,60 +1,57 @@
 #!/usr/bin/env bash
-# Sends the CD result to Telegram. Missing bot settings only warn:
-# a Telegram problem must never mark a good deploy as failed.
-# Env: BOT_TOKEN CHAT_ID TOPIC_ID ENVIRONMENT TAG ACTOR COMMIT_MSG RUN_URL
-#      RESULTS (caller's toJSON(needs); every job except meta is a stage)
+# CD result to Telegram. Missing bot settings only warn: a Telegram problem must never mark a good deploy as failed.
+# Env: see notify-lib.sh, plus ENVIRONMENT TAG BRANCH ACTOR TITLE [HEALTH_URL]
+#
+#   🚀 Deployed to production
+#
+#   📦 Repo: Backend
+#   🌿 Branch: main
+#   🏷 Tag: abc1234
+#   👤 By: actor
+#   ⏱ Time: 4m 12s
+#   📝 Commit: the title
+#
+#   ✅ Build
+#   ✅ Deploy
+#
+#   🟢 healthz 200
+#
+#   [View run] [Commit] [Re-run on failure]
 set -euo pipefail
+# shellcheck source=notify-lib.sh
+. "$(dirname "$0")/notify-lib.sh"
 
-if [ -z "${BOT_TOKEN:-}" ] || [ -z "${CHAT_ID:-}" ]; then
-  echo "::warning::Telegram not configured"
-  exit 0
+failed=$(failed_jobs)
+if [ -n "$failed" ]; then headline="🔥 <b>Deploy to ${ENVIRONMENT} failed</b> (${failed})"; else headline="🚀 <b>Deployed to ${ENVIRONMENT}</b>"; fi
+
+# healthz after a good deploy
+health=""
+if [ -z "$failed" ] && [ -n "${HEALTH_URL:-}" ]; then
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL" || true)
+  if [ "$code" = 200 ]; then health="🟢 healthz 200"; else health="🔴 healthz ${code:-000}"; fi
 fi
 
-icon() {
-  case "$1" in
-    success) echo "✅" ;;
-    failure) echo "❌" ;;
-    cancelled) echo "⏹" ;;
-    *) echo "⏭" ;;
-  esac
-}
+duration=$(run_duration)
+tag_line=""; [ -z "${TAG:-}" ] || tag_line="🏷 Tag: <code>${TAG}</code>"
+time_line=""; [ -z "$duration" ] || time_line="⏱ Time: ${duration}"
+# optional lines are dropped when empty (grep) so the message has no holes
+info=$(printf '%s\n' \
+  "📦 Repo: <b>${REPO#*/}</b>" \
+  "🌿 Branch: <code>$(html <<<"$BRANCH")</code>" \
+  "$tag_line" \
+  "👤 By: <b>$(html <<<"$ACTOR")</b>" \
+  "$time_line" \
+  "📝 Commit: <i>$(head -n1 <<<"${TITLE:-}" | html)</i>" | grep -v '^$')
 
-escape_html() {
-  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
-}
+text=$(cat <<MSG
+${headline}
 
-RESULTS=${RESULTS:-'{}'}
-STAGE_LINE=""
-while IFS=$'\t' read -r JOB RESULT; do
-  [ -z "$JOB" ] && continue
-  STAGE_LINE+="$(icon "$RESULT") ${JOB^}  "
-done < <(jq -r 'to_entries[] | select(.key != "meta") | "\(.key)\t\(.value.result)"' <<<"$RESULTS")
+${info}
 
-DEPLOY=$(jq -r '.deploy.result // empty' <<<"$RESULTS")
-if [ "$DEPLOY" = success ]; then
-  STATUS="✅ <b>Deployed to ${ENVIRONMENT}</b>"
-else
-  STATUS="❌ <b>Deploy to ${ENVIRONMENT} failed</b>"
-fi
-
-TEXT=$(cat <<MSG
-${STATUS} <code>${TAG}</code>
-
-👤 $(escape_html "$ACTOR")
-📝 $(escape_html "$(printf '%s' "$COMMIT_MSG" | head -n1)")
-
-${STAGE_LINE% }
-
-🔗 <a href="${RUN_URL}">View run</a>
+$(stage_lines)
+${health:+
+$health}$(failure_details)
 MSG
 )
 
-ARGS=(-d chat_id="$CHAT_ID" -d parse_mode=HTML -d disable_web_page_preview=true)
-if [ -n "${TOPIC_ID:-}" ]; then
-  ARGS+=(-d message_thread_id="$TOPIC_ID")
-fi
-
-curl -fsS --retry 3 --retry-delay 2 --max-time 30 \
-  "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-  "${ARGS[@]}" --data-urlencode "text=${TEXT}" >/dev/null \
-  || echo "::warning::Telegram sendMessage failed"
+send "$text" "$(buttons "$failed")"

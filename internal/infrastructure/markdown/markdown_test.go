@@ -180,3 +180,32 @@ func TestRenderLiveInjection(t *testing.T) {
 		t.Errorf("close-code payload: %s", got)
 	}
 }
+
+func TestCodeTabs(t *testing.T) {
+	r := New()
+	two := "```go group=sort\na()\n```\n\n```python group=sort\nb()\n```\n"
+	got := r.Render(two)
+	for _, w := range []string{`<div class="code-tabs">`, `language-go`, `language-python`, "</div>"} {
+		if !strings.Contains(got, w) {
+			t.Errorf("group render = %q, want %q", got, w)
+		}
+	}
+	if strings.Count(got, "<pre>") != 2 {
+		t.Errorf("want two pre blocks: %q", got)
+	}
+	for name, in := range map[string]string{
+		"single":      "```go group=sort\na()\n```\n",
+		"split":       "```go group=sort\na()\n```\n\ntext\n\n```py group=sort\nb()\n```\n",
+		"other group": "```go group=a\na()\n```\n\n```py group=b\nb()\n```\n",
+		"no group":    "```go\na()\n```\n\n```py\nb()\n```\n",
+	} {
+		if g := r.Render(in); strings.Contains(g, "code-tabs") {
+			t.Errorf("%s: must not group: %q", name, g)
+		}
+	}
+	// a group name with markup is not a group, and nothing leaks into HTML
+	bad := r.Render("```go group=\"><script>\na\n```\n\n```py group=\"><script>\nb\n```\n")
+	if strings.Contains(bad, "<script") || strings.Contains(bad, "code-tabs") {
+		t.Errorf("bad group: %q", bad)
+	}
+}
