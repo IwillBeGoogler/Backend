@@ -45,7 +45,7 @@ jobs:
 
       - name: Vault secrets
         id: vault
-        uses: hashicorp/vault-action@v3.4.0
+        uses: hashicorp/vault-action@v4.0.0
         with:
           url: ${{ vars.VAULT_ADDR }}
           method: jwt
@@ -57,7 +57,7 @@ jobs:
             ${{ inputs.vault-secret-path }} token | DOCKERHUB_TOKEN
 
       - name: Docker login
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@v4.8.0
         with:
           registry: docker.io
           username: ${{ steps.vault.outputs.DOCKERHUB_USERNAME }}
