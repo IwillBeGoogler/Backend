@@ -40,6 +40,8 @@ Loaded with [oneenv](https://github.com/bakhod1r/oneenv) from `.env` (optional, 
 | `PASSWORD_HASH_MEMORY_KIB`, `PASSWORD_HASH_TIME`, `PASSWORD_HASH_THREADS` | `65536`, `3`, `2` | argon2id parameters (Guard); minimum `19456`, `2`, `1`. Changing them rehashes each password on its next login, so don't change them casually in production |
 | `AUDIT_EMAIL_KEY` | — | hex, ≥ 32 bytes (`openssl rand -hex 32`). Audit events then store a keyed `email_hmac` instead of an unkeyed `email_sha256`. Applies to audit events only. Startup fails on an invalid key and warns when it is empty |
 | `SESSION_IDLE_TIMEOUT`, `SESSION_ABSOLUTE_TIMEOUT` | `30m`, `168h` | a session ends after this long without a request (every request slides the window) and at the latest this long after login; `POST /api/auth/refresh` rotates a live token, it cannot revive an expired session |
+| `UPLOAD_UNUSED_DAYS` | `3` | the worker deletes an uploaded image (with its thumbnail and variants) that no story, revision, comment, profile, publication, series or list refers to once it is this many days old; `0` keeps everything. Only images uploaded since migration `00049` are swept |
+| `UPLOAD_QUOTA_MB` | `2048` | image storage one account may use through `POST /api/uploads` (originals only; `0` = unlimited). Uploads made before migration `00049` are not counted |
 | `MFA_KEY` | `dev-mfa-key-change-me` | encrypts two-factor secrets; **change in production** (changing it later breaks existing 2FA setups) |
 | `SITE_NAME` | `IWillBeGoogler` | product name in RSS and prerendered pages |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET` | — | Cloudflare Turnstile CAPTCHA on signup (set both or neither); the site key reaches the client via `GET /api/config`. Signup also has a honeypot field |
@@ -77,7 +79,7 @@ cmd/app/                      entrypoint, graceful shutdown
 cmd/createadmin/              CLI: create/update super admin
 app/                          wiring (+ integration tests)
 config/                       env config
-migrations/                   goose SQL (embedded)
+migrations/                   goose SQL (embedded); from 00049 on, an index on an existing table must be CREATE INDEX CONCURRENTLY in a "-- +goose NO TRANSACTION" file (migrations_test.go enforces it)
 internal/
   domain/                     entities, rules, repository interfaces
     post/ comment/ category/ user/ social/ report/ publication/

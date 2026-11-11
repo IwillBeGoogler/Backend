@@ -1085,7 +1085,8 @@ func TestUploadsToMinIO(t *testing.T) {
 	res, err := http.Get(e.srv.URL + u.URL)
 	must(t, err)
 	res.Body.Close()
-	if res.StatusCode != 200 || res.Header.Get("Content-Type") != "image/png" {
+	// a PNG is stored as WebP
+	if res.StatusCode != 200 || res.Header.Get("Content-Type") != "image/webp" || !strings.HasSuffix(u.URL, ".webp") {
 		t.Fatalf("GET %s: %d %s", u.URL, res.StatusCode, res.Header.Get("Content-Type"))
 	}
 	eventually(t, "thumbnail", func() bool {

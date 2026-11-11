@@ -53,14 +53,19 @@ func newUploaded(key string) uploaded {
 // variants (320, 640, 1280 wide) for responsive images.
 //
 // Multipart field "file". JPEG, PNG, GIF or WebP up to 5 MB, detected from
-// content. EXIF (GPS position, device), XMP and text metadata are removed;
-// orientation and the colour profile are kept. Use url as cover_url or avatar_url, and srcset in <img srcset>.
-// Rate limit: 10 per minute.
+// content. Every image is stored as WebP, so url ends in .webp: a JPEG lossy
+// and turned upright by its EXIF orientation, a PNG and a still GIF lossless
+// (transparency kept), an animated GIF as an animated WebP, a WebP
+// compressed again when that makes it smaller. EXIF, XMP and text metadata
+// are dropped. Use url as cover_url or avatar_url, and srcset in <img srcset>.
+// Rate limit: 10 per minute. An account may store UPLOAD_QUOTA_MB in total
+// (409 once it is full).
 // Auth: upload.create.
 //
 // spector:tags uploads
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.requireUser(w, r); !ok || !h.allow(w, r, "upload", 10, time.Minute) {
+	u, ok := h.requireUser(w, r)
+	if !ok || !h.allow(w, r, "upload", 10, time.Minute) {
 		return
 	}
 	if err := h.Blog.Authz.Can(r.Context(), "upload", "create", 0, 0); err != nil {
@@ -94,9 +99,27 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusBadRequest, "not a valid image")
 		return
 	}
-	// The original is served as is: drop GPS position, device and other
-	// metadata before it is stored (the pixels are untouched).
+	// Every image is stored as WebP: smaller, and without EXIF or other metadata.
+	if out, err := images.ToWebP(data); err != nil {
+		// A picture that decodes but cannot be converted (an animation too big to hold in memory, an encoder
+		// failure): keep the upload in its own format, stripped of metadata below.
+		zap.L().Warn("upload to webp", zap.Any("ctx", r.Context()), zap.String("type", ctype), zap.Error(err))
+	} else {
+		data, ctype, ext = out, "image/webp", imageExt["image/webp"]
+	}
 	data = images.StripMetadata(data)
+	// Two uploads racing past the check can exceed the quota by one file; the next one is refused.
+	if h.Uploads != nil && h.UploadQuotaBytes > 0 {
+		used, err := h.Uploads.Usage(r.Context(), u.ID)
+		if err != nil {
+			respond(w, r, 0, nil, err, "")
+			return
+		}
+		if used+int64(len(data)) > h.UploadQuotaBytes {
+			writeError(w, r, http.StatusConflict, "upload storage is full ("+strconv.FormatInt(h.UploadQuotaBytes>>20, 10)+" MB per account)")
+			return
+		}
+	}
 	name := make([]byte, 16)
 	if _, err := rand.Read(name); err != nil {
 		respond(w, r, 0, nil, err, "")
@@ -106,6 +129,12 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	if err := h.Storage.Put(r.Context(), key, bytes.NewReader(data), int64(len(data)), ctype); err != nil {
 		respond(w, r, 0, nil, err, "")
 		return
+	}
+	if h.Uploads != nil {
+		if err := h.Uploads.Record(r.Context(), key, u.ID, int64(len(data))); err != nil {
+			// The image is stored and usable; it only goes uncounted.
+			zap.L().Warn("upload ledger", zap.Any("ctx", r.Context()), zap.String("key", key), zap.Error(err))
+		}
 	}
 	if err := h.Jobs.Thumbnail(r.Context(), key); err != nil {
 		// The original is stored; only derived sizes are missing. Clients fall

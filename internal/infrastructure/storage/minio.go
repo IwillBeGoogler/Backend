@@ -78,6 +78,11 @@ func (m *MinIO) Get(ctx context.Context, key string) (application.Object, error)
 	return application.Object{Body: obj, ContentType: info.ContentType, Size: info.Size}, nil
 }
 
+// Remove deletes an object; a missing one is not an error.
+func (m *MinIO) Remove(ctx context.Context, key string) error {
+	return m.client.RemoveObject(ctx, m.bucket, key, minio.RemoveObjectOptions{})
+}
+
 // Ping checks the bucket is reachable (health).
 func (m *MinIO) Ping(ctx context.Context) error {
 	_, err := m.client.BucketExists(ctx, m.bucket)

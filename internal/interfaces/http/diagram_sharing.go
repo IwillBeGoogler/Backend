@@ -17,6 +17,7 @@ import (
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/images"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 )
 
@@ -476,7 +477,9 @@ func (h *Handler) dgAllow(w http.ResponseWriter, r *http.Request, name string, n
 // dgUploadAsset stores an image content-addressed by its sha256.
 //
 // Multipart field "file", first in the body. PNG, JPEG, WebP or SVG, detected
-// from the bytes (SVG is sanitized first; one that cannot be cleaned: 415). Over the size limit: 413. Response:
+// from the bytes (SVG is sanitized first; one that cannot be cleaned: 415).
+// A PNG, JPEG or WebP is stored as WebP, so hash, mime and size describe the
+// converted file. Over the size limit: 413. Response:
 // {"asset": {hash, mime, size, url, deduped}}, 201 for new bytes and 200
 // when the same bytes were stored before. Auth: any user; at most 60
 // uploads a minute (429).
@@ -511,6 +514,14 @@ func (h *Handler) dgUploadAsset(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		dgFail(w, r, http.StatusBadRequest, "INVALID_MULTIPART", "Request body is not valid multipart/form-data", nil)
 		return
+	}
+	// PNG, JPEG and WebP images are stored as WebP (smaller, no metadata); SVG and anything that cannot be
+	// converted stay as sent, and StoreAsset still decides what is accepted.
+	switch diagram.DetectMime(data) {
+	case diagram.MimePNG, diagram.MimeJPEG, diagram.MimeWebP:
+		if out, err := images.ToWebP(data); err == nil {
+			data = out
+		}
 	}
 	a, err := h.Diagrams.StoreAsset(r.Context(), uid, data)
 	if err != nil {

@@ -39,6 +39,10 @@ type Deps struct {
 	// MQTTPublicWSPath is where browsers reach the broker (GET /realtime/config).
 	MQTTPublicWSPath string
 	Storage          application.Storage
+	// Uploads tracks uploaded images per user (nil: no ledger, no quota);
+	// UploadQuotaBytes is the most one user may store (0: unlimited).
+	Uploads          application.UploadLedger
+	UploadQuotaBytes int64
 	Jobs             application.Jobs
 	Events           application.Events
 	Limit            Limiter

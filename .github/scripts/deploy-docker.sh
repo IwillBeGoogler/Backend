@@ -70,6 +70,9 @@ addenv PUBLIC_URL "https://$DOMAIN"
 addenv CORS_ORIGINS "https://$DOMAIN,https://$ADMIN_DOMAIN"
 addenv SITE_NAME "${SITE_NAME:-IWillBeGoogler}"
 addenv TRUST_PROXY true
+# Only the edge containers on the docker network (caddy, web, admin) may set X-Real-IP: host nginx -> caddy -> api. The default
+# (every private range) would let any other container, or anything on the host network, pick the address rate limits see.
+addenv TRUSTED_PROXIES "${TRUSTED_PROXIES:-172.30.0.0/24}"
 addenv ADMIN_USERNAME "$ADMIN_USERNAME"
 addenv ADMIN_EMAIL "$ADMIN_EMAIL"
 addenv METRICS_ADDR ":9090"

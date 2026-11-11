@@ -57,6 +57,17 @@ func TestMinIO(t *testing.T) {
 	if _, err := m.Get(ctx, "missing"); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("missing: %v", err)
 	}
+
+	// Remove deletes the object, and a missing one is not an error
+	if err := m.Remove(ctx, "a/b.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.Get(ctx, "a/b.txt"); !errors.Is(err, domain.ErrNotFound) {
+		t.Errorf("after Remove: %v", err)
+	}
+	if err := m.Remove(ctx, "a/b.txt"); err != nil {
+		t.Errorf("removing a missing object: %v", err)
+	}
 	if _, err := m.Get(ctx, ""); err == nil || errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("empty key: %v", err)
 	}

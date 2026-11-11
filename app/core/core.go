@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/bakhod1r/errorx"
 	"github.com/bakhod1r/guard"
@@ -35,8 +36,12 @@ type Services struct {
 	RDB     *goredis.Client
 	Guard   *guard.Guard
 	Storage *storage.MinIO
-	Jobs    *queue.Client
-	Mailer  application.Mailer
+	// Uploads is the ledger behind the per-user upload quota.
+	Uploads application.UploadLedger
+	// UploadGrace is how long an unused upload is kept (0: never removed).
+	UploadGrace time.Duration
+	Jobs        *queue.Client
+	Mailer      application.Mailer
 	// Outbox holds sent mail when SMTP is not configured (dev, tests).
 	Outbox *mail.Memory
 
@@ -61,6 +66,9 @@ func (s *Services) Handlers() queue.Handlers {
 	h := queue.Handlers{Blog: s.Blog, Accounts: s.Accounts, Mailer: s.Mailer, Storage: s.Storage, Analytics: s.Analytics}
 	if s.Diagrams != nil {
 		h.Hooks = s.Diagrams.Hooks
+	}
+	if ledger, ok := s.Uploads.(application.UnusedUploads); ok && s.Storage != nil && s.UploadGrace > 0 {
+		h.Uploads = &application.UploadSweeper{Ledger: ledger, Storage: s.Storage, Grace: s.UploadGrace, Batch: 50}
 	}
 	return h
 }
@@ -120,6 +128,8 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 		return nil, fmt.Errorf("minio: %w", err)
 	}
 	s.Storage = st
+	s.Uploads = postgres.NewUploadRepo(db)
+	s.UploadGrace = time.Duration(max(cfg.UploadUnusedDays, 0)) * 24 * time.Hour
 
 	if cfg.SMTPAddr != "" {
 		sm := mail.SMTP{Addr: cfg.SMTPAddr, From: cfg.MailFrom, Username: cfg.SMTPUsername, Password: cfg.SMTPPassword, TLS: cfg.SMTPTLS}

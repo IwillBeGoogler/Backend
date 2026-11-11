@@ -168,6 +168,8 @@ type Handlers struct {
 	Storage  application.Storage
 	// Analytics purges old events in the sweep (nil: nothing to purge).
 	Analytics *application.Analytics
+	// Uploads removes images nothing uses any more in the sweep (nil: off).
+	Uploads *application.UploadSweeper
 	// Hooks sends diagram webhook deliveries (nil: the task is not handled).
 	Hooks *application.WebhookDispatcher
 	// InvalidateCache drops cached HTTP responses after a job changed public
@@ -210,7 +212,7 @@ func NewWorker(rdb *redis.Client, h Handlers) *Worker {
 		// The sweep runs every minute; invalidate only when it had work,
 		// otherwise the response cache would never outlive a minute.
 		work := sweepHasWork(ctx, h)
-		err := errors.Join(h.Blog.PublishDue(ctx), h.Accounts.PurgeDue(ctx), h.Accounts.LiftExpired(ctx), h.Analytics.PurgeOld(ctx), h.Blog.PurgeClientErrors(ctx))
+		err := errors.Join(h.Blog.PublishDue(ctx), h.Accounts.PurgeDue(ctx), h.Accounts.LiftExpired(ctx), h.Analytics.PurgeOld(ctx), h.Blog.PurgeClientErrors(ctx), h.Uploads.Sweep(ctx))
 		if work {
 			invalidate(ctx, h.InvalidateCache) // partial success still changed data
 		}

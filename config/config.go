@@ -115,6 +115,11 @@ type Config struct {
 	DiagramVersionsKeepDays int `env:"DIAGRAM_VERSIONS_KEEP_DAYS" default:"30" desc:"also keep the newest snapshot of each day for this many days"`
 	DiagramMaxProjectMB     int `env:"DIAGRAM_MAX_PROJECT_MB" default:"10" desc:"largest diagram document accepted, in MiB"`
 	DiagramMaxAssetMB       int `env:"DIAGRAM_MAX_ASSET_MB" default:"5" desc:"largest diagram image upload accepted, in MiB"`
+	// UploadQuotaMB caps what one account stores through POST /api/uploads
+	// (originals; thumbnails and variants are not counted).
+	// UploadUnusedDays is how long an uploaded image nothing refers to is kept.
+	UploadUnusedDays int `env:"UPLOAD_UNUSED_DAYS" default:"3" desc:"delete an uploaded image no story, comment or profile uses once it is this many days old; 0 = keep all"`
+	UploadQuotaMB    int `env:"UPLOAD_QUOTA_MB" default:"2048" desc:"most image storage one account may use through /api/uploads, in MiB; 0 = unlimited"`
 	// Live collaboration over MQTT (docs/MQTT.md): Yjs relay and audio rooms.
 	CollabEnabled      bool   `env:"COLLAB_ENABLED" default:"true" desc:"serve live co-editing (the Yjs relay on the dg/f/{id}/yjs/* MQTT topics)"`
 	CollabCompactAfter int    `env:"COLLAB_COMPACT_AFTER" default:"50" desc:"stored Yjs updates after which a client is asked to send a compacted snapshot"`

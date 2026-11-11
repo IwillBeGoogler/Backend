@@ -5,9 +5,13 @@ package http
 // wire, against the in-memory repository.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http/httptest"
 	"strings"
 	"sync"
@@ -526,5 +530,35 @@ func TestDiagramHTTPWriteEndpointsAreRateLimited(t *testing.T) {
 		if got := seen[len(seen)-1]; got != c.name+":user:1" {
 			t.Errorf("%s: limiter key %q", c.name, got)
 		}
+	}
+}
+
+func TestDiagramAssetUploadIsStoredAsWebP(t *testing.T) {
+	f := newCommentFixture(t, nil)
+	img := image.NewRGBA(image.Rect(0, 0, 64, 48))
+	for y := range 48 {
+		for x := range 64 {
+			img.Set(x, y, color.RGBA{uint8(x * 4), uint8(y * 5), 90, 255})
+		}
+	}
+	var png1 bytes.Buffer
+	if err := png.Encode(&png1, img); err != nil {
+		t.Fatal(err)
+	}
+	r := f.alice.upload("file", png1.Bytes())
+	if r.Code != 201 {
+		t.Fatalf("upload: %d %s", r.Code, r.Body)
+	}
+	asset := r.json().obj("asset")
+	if asset["mime"] != "image/webp" || asset["size"].(float64) >= float64(png1.Len()) {
+		t.Errorf("asset = %v (PNG was %d bytes)", asset, png1.Len())
+	}
+	// the same picture sent again lands on the same blob
+	if r := f.alice.upload("file", png1.Bytes()); r.Code != 200 || r.json().obj("asset")["hash"] != asset["hash"] {
+		t.Errorf("second upload: %d %s", r.Code, r.Body)
+	}
+	// bytes that only look like a PNG are stored as sent, as before
+	if r := f.alice.upload("file", testPNG); r.Code != 201 || r.json().obj("asset")["mime"] != "image/png" {
+		t.Errorf("undecodable PNG: %d %s", r.Code, r.Body)
 	}
 }

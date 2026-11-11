@@ -112,6 +112,26 @@ type Storage interface {
 	Get(ctx context.Context, key string) (Object, error)
 }
 
+// UploadLedger records who uploaded which image, for the per-user storage quota.
+type UploadLedger interface {
+	// Usage is the total size, in bytes, of the images userID uploaded.
+	Usage(ctx context.Context, userID int) (int64, error)
+	Record(ctx context.Context, key string, userID int, size int64) error
+}
+
+// UnusedUploads finds and forgets uploaded images nothing refers to.
+type UnusedUploads interface {
+	// Unused returns up to limit keys of images uploaded before olderThan
+	// that no content refers to; images still in use are marked as checked.
+	Unused(ctx context.Context, olderThan time.Time, limit int) ([]string, error)
+	Forget(ctx context.Context, keys []string) error
+}
+
+// ObjectRemover deletes stored objects (a missing one is not an error).
+type ObjectRemover interface {
+	Remove(ctx context.Context, key string) error
+}
+
 type Object struct {
 	Body        io.ReadCloser
 	ContentType string
