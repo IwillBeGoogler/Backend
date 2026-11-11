@@ -1,13 +1,15 @@
 name: go-test
 
-# Reusable: go test with coverage, uploaded as an artifact (for Sonar).
+# Reusable: go test with coverage, split over parallel shards; the shard profiles are merged, gated and uploaded as one
+# artifact (for Sonar).
 on:
   workflow_call:
     inputs:
       packages: { type: string, default: ./..., description: Go packages to test }
       test-flags: { type: string, default: -race -count=1 -covermode=atomic -coverpkg=./..., description: "several flags, word-split on purpose; -coverpkg counts cross-package coverage" }
-      coverage-file: { type: string, default: coverage.out, description: coverage profile path }
-      coverage-artifact: { type: string, default: coverage, description: artifact name of the profile }
+      shards: { type: string, default: "[1,2,3,4]", description: "JSON array, one parallel test job per entry; packages are spread round-robin" }
+      coverage-file: { type: string, default: coverage.out, description: merged coverage profile path }
+      coverage-artifact: { type: string, default: coverage, description: artifact name of the merged profile }
       coverage-min: { type: number, default: 95, description: minimum total statement coverage in percent }
       retention-days: { type: number, default: 1, description: artifact retention }
       go-version-file: { type: string, default: go.mod, description: file setup-go reads the Go version from }
@@ -19,9 +21,13 @@ permissions:
 
 jobs:
   test:
-    name: Test
+    name: Test (shard ${{ matrix.shard }})
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
+    strategy:
+      fail-fast: false # every failing shard is reported, not only the first
+      matrix:
+        shard: ${{ fromJSON(inputs.shards) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -35,9 +41,44 @@ jobs:
         env:
           PACKAGES: ${{ inputs.packages }}
           TEST_FLAGS: ${{ inputs.test-flags }}
+          COVERAGE_FILE: shard-${{ matrix.shard }}.out
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        run: bash .github/scripts/go-test.sh
+
+      - name: Upload shard coverage
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: coverage-shard-${{ matrix.shard }}
+          path: shard-${{ matrix.shard }}.out
+          retention-days: 1
+
+  coverage:
+    name: Coverage
+    needs: test
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+
+      - name: Download shard profiles
+        uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: coverage-shard-*
+          path: shards
+          merge-multiple: true
+
+      - name: Merge and gate
+        env:
           COVERAGE_FILE: ${{ inputs.coverage-file }}
           COVERAGE_MIN: ${{ inputs.coverage-min }}
-        run: bash .github/scripts/go-test.sh
+        run: bash .github/scripts/go-merge-coverage.sh shards/*.out
 
       - name: Upload coverage
         uses: actions/upload-artifact@v7.0.2
