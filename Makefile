@@ -9,8 +9,8 @@ EMAIL    ?= admin@example.com
 help: ## list targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  %-10s %s\n",$$1,$$2}'
 
-deps: ## start postgres, redis, minio, mailpit
-	docker compose up -d postgres redis minio mailpit
+deps: ## start postgres, redis, minio, mailpit, emqx
+	docker compose up -d postgres redis minio mailpit emqx
 
 run: ## run API (migrations run on start)
 	go run ./cmd/app

@@ -60,7 +60,7 @@ type Config struct {
 	TrustProxy     bool   `env:"TRUST_PROXY" default:"false" desc:"read client IP from X-Real-IP (set by nginx)"`
 	// TrustedProxies limits TRUST_PROXY: X-Real-IP is honoured only from these peers.
 	TrustedProxies string `env:"TRUSTED_PROXIES" default:"127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16" desc:"comma-separated CIDRs allowed to set X-Real-IP"`
-	CORSOrigins    string `env:"CORS_ORIGINS" desc:"comma-separated browser origins allowed by CORS; empty = SITE_URL and http://localhost:8082"`
+	CORSOrigins    string `env:"CORS_ORIGINS" desc:"comma-separated browser origins allowed by CORS; empty = SITE_URL (plus http://localhost:8082 in dev)"`
 	Worker         bool   `env:"WORKER" default:"true" desc:"run background jobs in this process"`
 	MetricsAddr    string `env:"METRICS_ADDR" default:":9090" desc:"private listener for /metrics; empty disables it"`
 	// MetricsToken additionally serves /metrics on the public port, behind
@@ -90,6 +90,13 @@ type Config struct {
 	// AuditEmailKey keys the email fingerprint in Guard's audit events (HMAC
 	// instead of plain SHA-256). Generate with: openssl rand -hex 32
 	AuditEmailKey string `env:"AUDIT_EMAIL_KEY,secret" desc:"hex key, >= 32 bytes, for email HMAC in audit events"`
+
+	// Session lifetime (Guard). A session ends after SessionIdleTimeout
+	// without a request (each request slides the window) and at the latest
+	// SessionAbsoluteTimeout after login. POST /api/auth/refresh rotates the
+	// token of a session that is still valid; it cannot revive an expired one.
+	SessionIdleTimeout     time.Duration `env:"SESSION_IDLE_TIMEOUT" default:"30m" desc:"sign a session out after this long without a request (min 1m)"`
+	SessionAbsoluteTimeout time.Duration `env:"SESSION_ABSOLUTE_TIMEOUT" default:"168h" desc:"longest a session lasts from login, whatever the activity (>= SESSION_IDLE_TIMEOUT)"`
 
 	SiteName string `env:"SITE_NAME" default:"IWillBeGoogler" desc:"product name in feeds and prerendered pages"`
 
@@ -191,7 +198,14 @@ func (c *Config) Validate() error {
 		return errors.New("config: set both TURNSTILE_SITE_KEY and TURNSTILE_SECRET, or neither")
 	}
 	if c.RateLimitMultiplier < 0 {
-		return fmt.Errorf("config: RATE_LIMIT_MULTIPLIER must be >= 1, got %d", c.RateLimitMultiplier)
+		return fmt.Errorf("config: RATE_LIMIT_MULTIPLIER must not be negative, got %d", c.RateLimitMultiplier)
+	}
+	// Zero (a Config built without defaults) keeps Guard's own timeouts.
+	if c.SessionIdleTimeout != 0 && c.SessionIdleTimeout < time.Minute {
+		return fmt.Errorf("config: SESSION_IDLE_TIMEOUT must be at least 1m, got %s", c.SessionIdleTimeout)
+	}
+	if c.SessionAbsoluteTimeout != 0 && c.SessionAbsoluteTimeout < c.SessionIdleTimeout {
+		return fmt.Errorf("config: SESSION_ABSOLUTE_TIMEOUT (%s) must not be shorter than SESSION_IDLE_TIMEOUT (%s)", c.SessionAbsoluteTimeout, c.SessionIdleTimeout)
 	}
 	c.RateLimitMultiplier = max(c.RateLimitMultiplier, 1)
 	if _, err := c.ICE(); err != nil {
@@ -254,6 +268,13 @@ func (c *Config) Validate() error {
 	if u, err := url.Parse(c.DatabaseURL); err == nil {
 		if pw, _ := u.User.Password(); weakSecrets[pw] {
 			errs = append(errs, errors.New("DATABASE_URL uses a known default password"))
+		}
+	}
+	// The defaults point at a developer machine: links in email, RSS, the
+	// sitemap and OAuth redirects would all be wrong.
+	for name, v := range map[string]string{"SITE_URL": c.SiteURL, "PUBLIC_URL": c.PublicURL} {
+		if localURL(v) {
+			errs = append(errs, fmt.Errorf("%s must be the public address, not %s", name, v))
 		}
 	}
 	if len(errs) > 0 {
@@ -337,12 +358,30 @@ func (c Config) TrustedProxyPrefixes() ([]netip.Prefix, error) {
 	return out, nil
 }
 
-// AllowedOrigins is CORS_ORIGINS, or the client site and the local admin.
+// AllowedOrigins is CORS_ORIGINS, or the client site (and, in dev only, the
+// local admin panel).
 func (c Config) AllowedOrigins() []string {
 	if o := splitList(c.CORSOrigins); len(o) > 0 {
 		return o
 	}
-	return []string{strings.TrimRight(c.SiteURL, "/"), "http://localhost:8082"}
+	site := strings.TrimRight(c.SiteURL, "/")
+	if c.Dev() {
+		return []string{site, "http://localhost:8082"}
+	}
+	return []string{site}
+}
+
+// localURL reports whether raw points at this machine.
+func localURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	switch strings.ToLower(u.Hostname()) {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	return false
 }
 
 func splitList(s string) []string {

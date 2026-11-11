@@ -103,6 +103,7 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 		HashTime:      cfg.PasswordHashTime,
 		HashThreads:   cfg.PasswordHashThreads,
 		AuditEmailKey: cfg.AuditEmailKey,
+		SessionIdle:   cfg.SessionIdleTimeout, SessionAbsolute: cfg.SessionAbsoluteTimeout,
 		// Guard schema + access seed run here only with MIGRATE_ON_START;
 		// otherwise cmd/migrate owns them.
 		Migrate:     cfg.MigrateOnStart,

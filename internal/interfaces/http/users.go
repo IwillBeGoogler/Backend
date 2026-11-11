@@ -74,8 +74,11 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 
 // login returns a session for a username or email and password.
 //
-// Send the token as Authorization: Bearer <token>; it expires after 30
-// minutes idle (renew with POST /api/auth/refresh). Logging in to an
+// Send the token as Authorization: Bearer <token>. The session ends after
+// SESSION_IDLE_TIMEOUT (30 minutes) without a request, each request slides
+// that window, and at the latest SESSION_ABSOLUTE_TIMEOUT (7 days) after
+// login. POST /api/auth/refresh rotates the token of a live session; an
+// expired one needs a new login. Logging in to an
 // account with a pending deletion restores it. Rate limit: 10 per minute
 // per IP; repeated failures lock the account briefly.
 // Auth: none.

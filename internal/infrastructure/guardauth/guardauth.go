@@ -51,6 +51,7 @@ func Open(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, o Options) (
 		Logger:             slog.New(zapslog.NewHandler(zap.L().Core())),
 		PasswordHashParams: hash,
 		AuditEmailKey:      emailKey,
+		Session:            guard.SessionPolicy{IdleTimeout: o.SessionIdle, AbsoluteTimeout: o.SessionAbsolute},
 	})
 	if err != nil {
 		return nil, err

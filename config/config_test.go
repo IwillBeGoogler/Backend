@@ -3,6 +3,7 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func prodConfig() Config {
@@ -133,5 +134,45 @@ func TestSocialLoginNeedsIDAndSecret(t *testing.T) {
 	c := Config{GoogleClientID: "id", GitHubClientID: "id", GitHubClientSecret: "s"}
 	if c.GoogleEnabled() || !c.GitHubEnabled() {
 		t.Fatalf("google=%v github=%v", c.GoogleEnabled(), c.GitHubEnabled())
+	}
+}
+
+func TestValidateSessionTimeouts(t *testing.T) {
+	c := prodConfig()
+	c.SessionIdleTimeout = time.Second
+	if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "SESSION_IDLE_TIMEOUT") {
+		t.Errorf("short idle timeout: err = %v", err)
+	}
+	c = prodConfig()
+	c.SessionIdleTimeout, c.SessionAbsoluteTimeout = time.Hour, time.Minute
+	if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "SESSION_ABSOLUTE_TIMEOUT") {
+		t.Errorf("absolute shorter than idle: err = %v", err)
+	}
+	c = prodConfig()
+	c.SessionIdleTimeout, c.SessionAbsoluteTimeout = 24*time.Hour, 30*24*time.Hour
+	if err := c.Validate(); err != nil {
+		t.Errorf("valid timeouts: %v", err)
+	}
+}
+
+func TestValidateProductionURLs(t *testing.T) {
+	for name, set := range map[string]func(*Config){
+		"SITE_URL":   func(c *Config) { c.SiteURL = "http://localhost:8081" },
+		"PUBLIC_URL": func(c *Config) { c.PublicURL = "http://127.0.0.1:8080" },
+	} {
+		c := prodConfig()
+		set(&c)
+		if err := c.Validate(); err == nil || !strings.Contains(err.Error(), name) {
+			t.Errorf("local %s in production: err = %v", name, err)
+		}
+	}
+	c := prodConfig()
+	c.SiteURL, c.PublicURL = "https://blog.example", "https://blog.example"
+	if err := c.Validate(); err != nil {
+		t.Errorf("public URLs: %v", err)
+	}
+	d := Config{Env: "dev", SiteURL: "http://localhost:8081", PublicURL: "http://localhost:8080"}
+	if err := d.Validate(); err != nil {
+		t.Errorf("dev keeps local URLs: %v", err)
 	}
 }

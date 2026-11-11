@@ -3,6 +3,7 @@ package guardauth
 import (
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/bakhod1r/guard"
 )
@@ -17,6 +18,10 @@ type Options struct {
 	// AuditEmailKey is AUDIT_EMAIL_KEY: hex, at least 32 bytes once decoded.
 	// Empty leaves audit events with an unkeyed email fingerprint.
 	AuditEmailKey string
+	// SessionIdle and SessionAbsolute are SESSION_IDLE_TIMEOUT and
+	// SESSION_ABSOLUTE_TIMEOUT. Zero keeps Guard's defaults (30 minutes, 7 days).
+	SessionIdle     time.Duration
+	SessionAbsolute time.Duration
 	// Migrate applies Guard's migrations and seeds permissions, roles and
 	// policies (Seed, SeedAccessRules) when Open runs. MIGRATE_ON_START.
 	Migrate bool

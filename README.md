@@ -1,6 +1,6 @@
 # backend-monolith-go
 
-Medium-style blogging API. Go 1.26, DDD layout, PostgreSQL (pgx) + goose migrations, Redis (cache, rate limits, views, queue, pub/sub), MinIO for uploads, [Guard](https://github.com/bakhod1r/guard) for accounts, sessions, RBAC/ABAC and audit.
+Medium-style blogging API. Go 1.27, DDD layout, PostgreSQL (pgx) + goose migrations, Redis (cache, rate limits, views, queue, pub/sub), MinIO for uploads, [Guard](https://github.com/bakhod1r/guard) for accounts, sessions, RBAC/ABAC and audit.
 
 Frontends: [client-react](https://github.com/IWillBeGoogler/iwillbegoogler-client-react), [admin-react](https://github.com/IWillBeGoogler/iwillbegoogler-admin-react).
 
@@ -39,6 +39,7 @@ Loaded with [oneenv](https://github.com/bakhod1r/oneenv) from `.env` (optional, 
 | `IMPORT_ALLOW_PRIVATE` | `false` | let story import fetch private/loopback addresses (tests only, never in production) |
 | `PASSWORD_HASH_MEMORY_KIB`, `PASSWORD_HASH_TIME`, `PASSWORD_HASH_THREADS` | `65536`, `3`, `2` | argon2id parameters (Guard); minimum `19456`, `2`, `1`. Changing them rehashes each password on its next login, so don't change them casually in production |
 | `AUDIT_EMAIL_KEY` | — | hex, ≥ 32 bytes (`openssl rand -hex 32`). Audit events then store a keyed `email_hmac` instead of an unkeyed `email_sha256`. Applies to audit events only. Startup fails on an invalid key and warns when it is empty |
+| `SESSION_IDLE_TIMEOUT`, `SESSION_ABSOLUTE_TIMEOUT` | `30m`, `168h` | a session ends after this long without a request (every request slides the window) and at the latest this long after login; `POST /api/auth/refresh` rotates a live token, it cannot revive an expired session |
 | `MFA_KEY` | `dev-mfa-key-change-me` | encrypts two-factor secrets; **change in production** (changing it later breaks existing 2FA setups) |
 | `SITE_NAME` | `IWillBeGoogler` | product name in RSS and prerendered pages |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET` | — | Cloudflare Turnstile CAPTCHA on signup (set both or neither); the site key reaches the client via `GET /api/config`. Signup also has a honeypot field |

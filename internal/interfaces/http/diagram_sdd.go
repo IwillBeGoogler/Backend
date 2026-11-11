@@ -56,6 +56,21 @@ func sddHeaders(w http.ResponseWriter, filename string) {
 	hd.Set("Content-Disposition", `attachment; filename="`+filename+`"`)
 	hd.Set("Cache-Control", "private, no-cache")
 	hd.Set("X-Content-Type-Options", "nosniff")
+	slowTransfer(w)
+}
+
+// sddTransferTimeout bounds one .sdd upload or download. The server's 30 s
+// read and write timeouts fit JSON calls, not a file of up to
+// DIAGRAM_MAX_SDD_MB on a slow connection.
+const sddTransferTimeout = 10 * time.Minute
+
+// slowTransfer moves this request's read and write deadlines out to
+// sddTransferTimeout. A writer that cannot (tests) keeps the server's.
+func slowTransfer(w http.ResponseWriter) {
+	rc := http.NewResponseController(w)
+	deadline := time.Now().Add(sddTransferTimeout)
+	_ = rc.SetReadDeadline(deadline)
+	_ = rc.SetWriteDeadline(deadline)
 }
 
 // sddFail answers an upload the server cannot use: 422 SDD_INVALID with
@@ -145,6 +160,7 @@ func (h *Handler) dgExportProject(w http.ResponseWriter, r *http.Request) {
 // readSDD reads the "file" field of a multipart upload.
 func (h *Handler) readSDD(w http.ResponseWriter, r *http.Request) (name string, data []byte, ok bool) {
 	limit := h.Diagrams.SDDMaxBytes()
+	slowTransfer(w)
 	r.Body = http.MaxBytesReader(w, r.Body, limit+smallBody)
 	mr, err := r.MultipartReader()
 	if err != nil {

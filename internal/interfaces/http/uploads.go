@@ -53,7 +53,8 @@ func newUploaded(key string) uploaded {
 // variants (320, 640, 1280 wide) for responsive images.
 //
 // Multipart field "file". JPEG, PNG, GIF or WebP up to 5 MB, detected from
-// content. Use url as cover_url or avatar_url, and srcset in <img srcset>.
+// content. EXIF (GPS position, device), XMP and text metadata are removed;
+// orientation and the colour profile are kept. Use url as cover_url or avatar_url, and srcset in <img srcset>.
 // Rate limit: 10 per minute.
 // Auth: upload.create.
 //
@@ -93,6 +94,9 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusBadRequest, "not a valid image")
 		return
 	}
+	// The original is served as is: drop GPS position, device and other
+	// metadata before it is stored (the pixels are untouched).
+	data = images.StripMetadata(data)
 	name := make([]byte, 16)
 	if _, err := rand.Read(name); err != nil {
 		respond(w, r, 0, nil, err, "")
