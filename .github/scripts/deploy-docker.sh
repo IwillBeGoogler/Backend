@@ -55,10 +55,10 @@ addenv() { env_args+=(-e "$1=$2"); }
 addenv APP_ENV production
 addenv DB_MAX_CONNS 15
 addenv DB_MIN_CONNS 1
-addenv S3_ENDPOINT minio:9000
+addenv S3_ENDPOINT "${HOST_GATEWAY:-172.30.0.1}:9000" # MinIO runs on the host under systemd (minio.service)
 addenv S3_BUCKET "${S3_BUCKET:-uploads}"
 addenv S3_USE_SSL false
-addenv MQTT_URL tcp://emqx:1883
+addenv MQTT_URL "tcp://${HOST_GATEWAY:-172.30.0.1}:1883" # EMQX runs on the host under systemd (emqx.service)
 addenv MQTT_USERNAME api
 addenv MQTT_PUBLIC_WS_PATH /mqtt
 addenv SMTP_ADDR "${SMTP_ADDR:-smtp-relay:587}"
@@ -77,7 +77,7 @@ addenv TURNSTILE_SITE_KEY "${TURNSTILE_SITE_KEY:-}"
 addenv OTEL_EXPORTER_OTLP_ENDPOINT "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
 addenv GOOGLE_CLIENT_ID "${GOOGLE_CLIENT_ID:-}"
 addenv GITHUB_CLIENT_ID "${GITHUB_CLIENT_ID:-}"
-addenv EMQX_API_URL http://emqx:18083
+addenv EMQX_API_URL "http://${HOST_GATEWAY:-172.30.0.1}:18083"
 addenv EMQX_API_KEY "${EMQX_API_KEY:-iwillbegoogler-api}"
 addenv VAULT_ADDR "$VAULT_ADDR"
 addenv VAULT_ROLE_ID "$VAULT_ROLE_ID"
@@ -142,7 +142,8 @@ start() { # service memory cpus extra-env...
 	wait_healthy "$name" || rollback
 }
 
-start api 512m 1.5 -e WORKER=false
+# 127.0.0.1:18080: the host EMQX calls /api/internal/mqtt/{auth,acl} here (Caddy blocks /api/internal from outside)
+start api 512m 1.5 -e WORKER=false -p 127.0.0.1:18080:8080
 start worker 384m 1
 echo "healthy: api worker @ $TAG"
 
