@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func TestCovPCSPosts(t *testing.T) {
 	must(t, err)
 	u2, err := users.Create(ctx, "covpcs_b", "covpcs_b@x.io")
 	must(t, err)
-	cat, err := cats.Create(ctx, "covpcs-cat")
+	cat, err := cats.Create(ctx, category.Input{Name: "covpcs-cat", Slug: "covpcs-cat"})
 	must(t, err)
 	pub, err := pubs.Create(ctx, publication.PublicationInput{Slug: "covpcs-pub", Name: "Pub"}, u1.ID)
 	must(t, err)

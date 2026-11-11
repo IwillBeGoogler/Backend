@@ -39,7 +39,8 @@ type Post struct {
 	PublishAt     *time.Time `json:"publish_at,omitempty"`
 	PublishedAt   *time.Time `json:"published_at"`
 	Author        string     `json:"author"`
-	CategoryID    int        `json:"category_id"`
+	CategoryID    int        `json:"category_id"`    // primary: first of CategoryIDs
+	CategoryIDs   []int      `json:"category_ids"`   // every category, primary first
 	PublicationID int        `json:"publication_id"` // 0 = personal
 	UserID        int        `json:"user_id"`
 	CoverURL      string     `json:"cover_url"`
@@ -68,7 +69,7 @@ func (p Post) IsReadable() bool { return p.Status == StatusPublished || p.Status
 func (p Post) Draft() Draft {
 	d := Draft{
 		Title: p.Title, Subtitle: p.Subtitle, Status: p.Status, PublishAt: p.PublishAt,
-		Body: p.Body, CategoryID: p.CategoryID, PublicationID: p.PublicationID,
+		Body: p.Body, CategoryID: p.CategoryID, CategoryIDs: p.CategoryIDs, PublicationID: p.PublicationID,
 		CoverURL: p.CoverURL, CanonicalURL: p.CanonicalURL, Tags: p.Tags,
 	}
 	for _, l := range p.Labels {
@@ -125,7 +126,8 @@ type Draft struct {
 	Status        Status     `json:"status"`
 	PublishAt     *time.Time `json:"publish_at"` // required when status is scheduled
 	Body          string     `json:"body"`
-	CategoryID    int        `json:"category_id"`
+	CategoryID    int        `json:"category_id"`    // primary; joins CategoryIDs
+	CategoryIDs   []int      `json:"category_ids"`   // up to 5, primary first
 	PublicationID int        `json:"publication_id"` // 0 = personal
 	CoverURL      string     `json:"cover_url"`
 	CanonicalURL  string     `json:"canonical_url"`
@@ -139,6 +141,7 @@ const (
 	maxBody   = 100_000
 	maxTags   = 10
 	maxLabels = 5
+	maxCats   = 5
 )
 
 // Normalize validates d and cleans it up; now checks publish_at.
@@ -188,6 +191,25 @@ func (d Draft) Normalize(now time.Time) (Draft, error) {
 	d.Tags = normalizeTags(d.Tags)
 	if len(d.Tags) > maxTags {
 		return d, domain.Invalid("too many tags")
+	}
+	ids := make([]int, 0, len(d.CategoryIDs)+1)
+	if d.CategoryID != 0 {
+		ids = append(ids, d.CategoryID)
+	}
+	for _, id := range d.CategoryIDs {
+		if id <= 0 {
+			return d, domain.Invalid("bad category_ids")
+		}
+		if !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) > maxCats {
+		return d, domain.Invalid("too many categories")
+	}
+	d.CategoryIDs, d.CategoryID = ids, 0
+	if len(ids) > 0 {
+		d.CategoryID = ids[0]
 	}
 	d.LabelIDs = slices.Compact(slices.Sorted(slices.Values(d.LabelIDs)))
 	if len(d.LabelIDs) > maxLabels {

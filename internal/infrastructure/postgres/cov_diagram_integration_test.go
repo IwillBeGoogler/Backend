@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 	"net"
 	"net/url"
 	"sync/atomic"
@@ -248,7 +249,11 @@ func TestCovDiagramRepo(t *testing.T) {
 			cats := postgres.NewCategoryRepo(p)
 			var id int
 			return covDiaRun(
-				func() error { c, err := cats.Create(ctx, "covdia "+tag); id = c.ID; return err },
+				func() error {
+					c, err := cats.Create(ctx, category.Input{Name: "covdia " + tag, Slug: "covdia " + tag})
+					id = c.ID
+					return err
+				},
 				func() error { ok, err := cats.Exists(ctx, id); return covDiaChk(err, ok, "exists") },
 				func() error { ok, err := cats.Exists(ctx, -1); return covDiaChk(err, !ok, "not exists") },
 				func() error { return cats.Delete(ctx, id) },

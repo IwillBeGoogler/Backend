@@ -7,6 +7,7 @@ package postgres_test
 import (
 	"context"
 	"errors"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 	"testing"
 	"time"
 
@@ -240,9 +241,9 @@ func TestCovUCSUsers(t *testing.T) {
 	})
 
 	t.Run("categories and stats", func(t *testing.T) {
-		cat, err := cats.Create(ctx, "covucs cat")
+		cat, err := cats.Create(ctx, category.Input{Name: "covucs cat", Slug: "covucs cat"})
 		must(t, err)
-		_, err = cats.Create(ctx, "covucs cat")
+		_, err = cats.Create(ctx, category.Input{Name: "covucs cat", Slug: "covucs cat"})
 		covUCSConflict(t, "dup category", err)
 		if ok, err := cats.Exists(ctx, cat.ID); err != nil || !ok {
 			t.Errorf("exists = %v, %v", ok, err)

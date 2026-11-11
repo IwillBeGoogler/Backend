@@ -22,7 +22,8 @@ const postCols = `p.id, p.title, p.subtitle, p.slug, p.status, p.body, p.reading
 	(SELECT count(*) FROM comments c WHERE c.post_id = p.id),
 	COALESCE((SELECT json_agg(json_build_object('id', l.id, 'name', l.name, 'color', l.color) ORDER BY l.name)
 		FROM post_labels pl JOIN labels l ON l.id = pl.label_id WHERE pl.post_id = p.id), '[]'),
-	p.created_at, p.updated_at, p.canonical_url`
+	p.created_at, p.updated_at, p.canonical_url,
+	ARRAY(SELECT pc.category_id FROM post_categories pc WHERE pc.post_id = p.id ORDER BY pc.position)`
 
 // notHidden is a WHERE condition leaving out posts, authors and tags the
 // user in parameter param hid ("show less like this").
@@ -38,7 +39,7 @@ func scanPost(row pgx.Row, extra ...any) (post.Post, error) {
 	var p post.Post
 	dest := append([]any{&p.ID, &p.Title, &p.Subtitle, &p.Slug, &p.Status, &p.Body, &p.ReadingTime, &p.PublishAt,
 		&p.PublishedAt, &p.Author, &p.CategoryID, &p.PublicationID, &p.UserID, &p.CoverURL, &p.Tags, &p.Likes, &p.Claps, &p.CommentsCount,
-		&p.Labels, &p.CreatedAt, &p.UpdatedAt, &p.CanonicalURL}, extra...)
+		&p.Labels, &p.CreatedAt, &p.UpdatedAt, &p.CanonicalURL, &p.CategoryIDs}, extra...)
 	return p, notFound(row.Scan(dest...))
 }
 
@@ -80,7 +81,11 @@ func (r *PostRepo) List(ctx context.Context, f post.Filter) (post.Page, error) {
 		where = append(where, arg(f.Tag)+" = ANY(p.tags)")
 	}
 	if f.CategoryID != 0 {
-		where = append(where, "p.category_id = "+arg(f.CategoryID))
+		// The category or any descendant.
+		where = append(where, `EXISTS (SELECT 1 FROM post_categories pc WHERE pc.post_id = p.id AND pc.category_id IN (
+			WITH RECURSIVE sub AS (SELECT id FROM categories WHERE id = `+arg(f.CategoryID)+`
+				UNION ALL SELECT c.id FROM categories c JOIN sub ON c.parent_id = sub.id)
+			SELECT id FROM sub))`)
 	}
 	if f.UserID != 0 {
 		where = append(where, "p.user_id = "+arg(f.UserID))
@@ -188,6 +193,9 @@ func (r *PostRepo) Create(ctx context.Context, d post.Draft, authorID int, autho
 		if err != nil {
 			return err
 		}
+		if err := setCategories(ctx, tx, id, d.CategoryIDs); err != nil {
+			return err
+		}
 		return setLabels(ctx, tx, id, d.LabelIDs)
 	})
 	if err != nil {
@@ -261,7 +269,23 @@ func updatePost(ctx context.Context, tx pgx.Tx, id int, d post.Draft) error {
 	if tag.RowsAffected() == 0 {
 		return domain.ErrNotFound
 	}
+	if err := setCategories(ctx, tx, id, d.CategoryIDs); err != nil {
+		return err
+	}
 	return setLabels(ctx, tx, id, d.LabelIDs)
+}
+
+// setCategories replaces the post's categories; position keeps their order (0 = primary).
+func setCategories(ctx context.Context, tx pgx.Tx, postID int, ids []int) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM post_categories WHERE post_id = $1`, postID); err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO post_categories (post_id, category_id, position)
+		SELECT $1, c, o - 1 FROM unnest($2::int[]) WITH ORDINALITY AS t(c, o)`, postID, ids)
+	return err
 }
 
 func setLabels(ctx context.Context, tx pgx.Tx, postID int, ids []int) error {

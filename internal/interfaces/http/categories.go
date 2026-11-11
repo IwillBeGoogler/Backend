@@ -2,12 +2,10 @@ package http
 
 import (
 	"net/http"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 	"strconv"
 )
-
-type categoryInput struct {
-	Name string `json:"name"`
-}
 
 type labelInput struct {
 	Name  string `json:"name"`
@@ -26,22 +24,32 @@ func (h *Handler) listCategories(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, c, err, "")
 }
 
-// createCategory creates a category.
+// categoryBySlug returns one category by slug.
 //
-// Names are unique, case-insensitive. Audited.
+// Auth: none.
+//
+// spector:tags categories
+func (h *Handler) categoryBySlug(w http.ResponseWriter, r *http.Request) {
+	c, err := h.Blog.CategoryBySlug(r.Context(), r.PathValue("slug"))
+	respond(w, r, http.StatusOK, c, err, categoryNotFound)
+}
+
+// createCategory creates a category, a root or under parent_id.
+//
+// Names and slugs are unique (names case-insensitive). Audited.
 // Auth: category.write (admin).
 //
 // spector:tags categories
 func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.requireUser(w, r)
-	var in categoryInput
+	var in category.Input
 	if ok && decode(w, r, &in) {
-		c, err := h.Blog.CreateCategory(r.Context(), actor, in.Name)
+		c, err := h.Blog.CreateCategory(r.Context(), actor, in)
 		respond(w, r, http.StatusCreated, c, err, "")
 	}
 }
 
-// deleteCategory deletes a category; its posts stay, uncategorized.
+// deleteCategory deletes a category and its subcategories; posts stay.
 //
 // Audited.
 // Auth: category.write (admin).
@@ -57,7 +65,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// categoryPosts lists published posts in a category.
+// categoryPosts lists published posts in a category or its subcategories.
 //
 // Paginate with page and limit.
 // Auth: none.

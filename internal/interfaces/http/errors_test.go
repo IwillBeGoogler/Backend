@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bakhod1r/errorx"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/relation"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/importer"
+	"github.com/bakhod1r/errorx"
 )
 
 func TestToProblem(t *testing.T) {

@@ -744,19 +744,26 @@ func (b *Blog) ListCategories(ctx context.Context) ([]category.Category, error) 
 	return b.Categories.List(ctx)
 }
 
-func (b *Blog) CreateCategory(ctx context.Context, actor user.User, name string) (category.Category, error) {
+func (b *Blog) CategoryBySlug(ctx context.Context, slug string) (category.Category, error) {
+	ctx, span := tracer.Start(ctx, "Blog.CategoryBySlug")
+	defer span.End()
+	return b.Categories.BySlug(ctx, slug)
+}
+
+func (b *Blog) CreateCategory(ctx context.Context, actor user.User, in category.Input) (category.Category, error) {
 	ctx, span := tracer.Start(ctx, "Blog.CreateCategory")
 	defer span.End()
 	if err := b.Authz.Can(ctx, "category", "write", 0, 0); err != nil {
 		return category.Category{}, err
 	}
-	name, err := category.NormalizeName(name)
+	in, err := in.Normalize()
 	if err != nil {
 		return category.Category{}, err
 	}
-	c, err := b.Categories.Create(ctx, name)
+	c, err := b.Categories.Create(ctx, in)
 	if err == nil {
-		b.Audit.Record(ctx, actor.ID, "category.create", "category:"+itoa(c.ID), map[string]any{"name": name})
+		b.Audit.Record(ctx, actor.ID, "category.create", "category:"+itoa(c.ID),
+			map[string]any{"name": in.Name, "parent_id": in.ParentID})
 	}
 	return c, err
 }

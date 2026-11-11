@@ -141,8 +141,11 @@ type fatCats struct {
 
 func (c fatCats) List(context.Context) ([]category.Category, error) { return nil, c.err }
 func (c fatCats) Exists(context.Context, int) (bool, error)         { return c.exists, c.err }
-func (c fatCats) Create(_ context.Context, n string) (category.Category, error) {
-	return category.Category{ID: 3, Name: n}, c.err
+func (c fatCats) Create(_ context.Context, in category.Input) (category.Category, error) {
+	return category.Category{ID: 3, Name: in.Name}, c.err
+}
+func (c fatCats) BySlug(context.Context, string) (category.Category, error) {
+	return category.Category{}, c.err
 }
 func (c fatCats) Delete(context.Context, int) error { return c.err }
 
@@ -454,13 +457,13 @@ func TestBlogStatsTagsBookmarks(t *testing.T) {
 	if _, err := w.b.ListCategories(ctx); err != nil {
 		t.Error(err)
 	}
-	if c, err := w.b.CreateCategory(ctx, ali, "News"); err != nil || c.ID != 3 {
+	if c, err := w.b.CreateCategory(ctx, ali, category.Input{Name: "News"}); err != nil || c.ID != 3 {
 		t.Error(c, err)
 	}
-	if _, err := w.b.CreateCategory(ctx, ali, ""); err == nil {
+	if _, err := w.b.CreateCategory(ctx, ali, category.Input{Name: ""}); err == nil {
 		t.Error("empty name")
 	}
-	if _, err := newFat(1).b.CreateCategory(ctx, ali, "x"); err == nil {
+	if _, err := newFat(1).b.CreateCategory(ctx, ali, category.Input{Name: "x"}); err == nil {
 		t.Error("forbidden")
 	}
 	if err := w.b.DeleteCategory(ctx, ali, 3); err != nil {
@@ -493,7 +496,7 @@ func TestBlogStatsTagsBookmarks(t *testing.T) {
 	}
 	w.p.err = nil
 	w.b.Categories = fatCats{err: errBoom}
-	if _, err := w.b.CreateCategory(ctx, ali, "x"); err == nil {
+	if _, err := w.b.CreateCategory(ctx, ali, category.Input{Name: "x"}); err == nil {
 		t.Error("repo err")
 	}
 	if err := w.b.DeleteCategory(ctx, ali, 3); err == nil {

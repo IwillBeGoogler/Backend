@@ -199,7 +199,12 @@ func (f *zCats) Exists(ctx context.Context, id int) (r0 bool, r1 error) {
 	return
 }
 
-func (f *zCats) Create(ctx context.Context, name string) (r0 category.Category, r1 error) {
+func (f *zCats) BySlug(ctx context.Context, slug string) (r0 category.Category, r1 error) {
+	r1 = f.c.err
+	return
+}
+
+func (f *zCats) Create(ctx context.Context, in category.Input) (r0 category.Category, r1 error) {
 	r1 = f.c.err
 	return
 }

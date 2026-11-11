@@ -15,29 +15,49 @@ type CategoryRepo struct{ db *pgxpool.Pool }
 func NewCategoryRepo(db *pgxpool.Pool) *CategoryRepo { return &CategoryRepo{db: db} }
 
 func (r *CategoryRepo) List(ctx context.Context) ([]category.Category, error) {
-	rows, err := r.db.Query(ctx, `SELECT c.id, c.name, count(p.id)
-		FROM categories c LEFT JOIN posts p ON p.category_id = c.id
-		GROUP BY c.id ORDER BY c.id`)
+	rows, err := r.db.Query(ctx, `SELECT `+categoryCols+` FROM categories c ORDER BY c.parent_id NULLS FIRST, c.position, c.name`)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[category.Category])
 }
 
+const categoryCols = `c.id, COALESCE(c.parent_id, 0), c.slug, c.name, c.names, c.description, c.position,
+	(SELECT count(*) FROM post_categories pc JOIN posts p ON p.id = pc.post_id
+		WHERE pc.category_id = c.id AND p.status = 'published')`
+
+func (r *CategoryRepo) BySlug(ctx context.Context, slug string) (category.Category, error) {
+	rows, err := r.db.Query(ctx, `SELECT `+categoryCols+` FROM categories c WHERE c.slug = $1`, slug)
+	if err != nil {
+		return category.Category{}, err
+	}
+	c, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[category.Category])
+	return c, notFound(err)
+}
+
 func (r *CategoryRepo) Exists(ctx context.Context, id int) (bool, error) {
 	return exists(ctx, r.db, `SELECT EXISTS (SELECT 1 FROM categories WHERE id = $1)`, id)
 }
 
-func (r *CategoryRepo) Create(ctx context.Context, name string) (category.Category, error) {
-	c := category.Category{Name: name}
-	err := r.db.QueryRow(ctx, `INSERT INTO categories (name) VALUES ($1) RETURNING id`, name).Scan(&c.ID)
-	if pgCode(err) == pgUniqueViolation {
+func (r *CategoryRepo) Create(ctx context.Context, in category.Input) (category.Category, error) {
+	if in.Names == nil {
+		in.Names = map[string]string{}
+	}
+	c := category.Category{ParentID: in.ParentID, Slug: in.Slug, Name: in.Name, Names: in.Names,
+		Description: in.Description, Position: in.Position}
+	err := r.db.QueryRow(ctx, `INSERT INTO categories (name, slug, parent_id, names, description, position)
+		VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6) RETURNING id`,
+		in.Name, in.Slug, in.ParentID, in.Names, in.Description, in.Position).Scan(&c.ID)
+	switch pgCode(err) {
+	case pgUniqueViolation:
 		return c, domain.ErrConflict
+	case pgForeignKeyViolation:
+		return c, domain.ErrNotFound
 	}
 	return c, err
 }
 
-// Delete leaves posts uncategorized (ON DELETE SET NULL).
+// Delete removes the subtree (ON DELETE CASCADE); posts lose those categories.
 func (r *CategoryRepo) Delete(ctx context.Context, id int) error {
 	return deleteByID(ctx, r.db, `DELETE FROM categories WHERE id = $1`, id)
 }

@@ -141,6 +141,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/categories", h.createCategory)
 	mux.HandleFunc("DELETE /api/categories/{id}", h.deleteCategory)
 	mux.HandleFunc("GET /api/categories/{id}/posts", h.categoryPosts)
+	mux.HandleFunc("GET /api/topics/{slug}", h.categoryBySlug)
 	mux.HandleFunc("GET /api/labels", h.listLabels)
 	mux.HandleFunc("POST /api/labels", h.createLabel)
 	mux.HandleFunc("DELETE /api/labels/{id}", h.deleteLabel)
