@@ -304,8 +304,15 @@ func TestForkTemplate(t *testing.T) {
 	if l := must1[diagram.Listing](t)(mem.Listing(dctx, res.File.ID)); l.Visibility != diagram.VisPrivate {
 		t.Errorf("visibility = %q", l.Visibility)
 	}
+	// a non-admin stranger cannot open it; an admin with diagrams.read opens it read-only (admin panel "Open")
+	admin := d.Authz
+	d.Authz = fakeAuthz{caller: alice}
 	if _, err := d.GetFile(dctx, alice, res.File.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("alice sees bob's fork: %v", err)
+	}
+	d.Authz = admin
+	if got := must1[DiagramFile](t)(d.GetFile(dctx, alice, res.File.ID)); got.Role != diagram.RoleViewer {
+		t.Errorf("admin role = %q", got.Role)
 	}
 	other := must1[DiagramProject](t)(d.ForkTemplate(dctx, bob, tp.ID))
 	if other.Project.ID == res.Project.ID {

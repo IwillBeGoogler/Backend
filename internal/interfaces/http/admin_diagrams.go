@@ -15,6 +15,7 @@ import (
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/core"
 )
 
 func (h *Handler) adminDiagramRoutes(mux *http.ServeMux) {
@@ -22,6 +23,7 @@ func (h *Handler) adminDiagramRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET "+p+"/stats", h.adminDiagramStats)
 	mux.HandleFunc("GET "+p+"/projects", h.adminDiagramProjects)
 	mux.HandleFunc("GET "+p+"/projects/{id}", h.adminDiagramProject)
+	mux.HandleFunc("GET "+p+"/files/{id}/preview", h.adminDiagramPreview)
 	mux.HandleFunc("DELETE "+p+"/projects/{id}", h.adminDeleteDiagramProject)
 	mux.HandleFunc("POST "+p+"/shares/{shareId}/revoke", h.adminRevokeDiagramShare)
 	mux.HandleFunc("GET "+p+"/templates", h.adminDiagramTemplates)
@@ -439,4 +441,47 @@ func (h *Handler) adminReorderDiagramTemplates(w http.ResponseWriter, r *http.Re
 		return
 	}
 	writeJSON(w, http.StatusOK, adminTemplates(ts))
+}
+
+// adminDiagramPreview renders every page of a file as SVG so the admin panel can show the diagram in place
+// (read-only). Admins with diagrams.read/manage reach any file through GetFile's admin read path.
+func (h *Handler) adminDiagramPreview(w http.ResponseWriter, r *http.Request) {
+	if h.Diagrams == nil {
+		writeError(w, r, http.StatusNotFound, "no such endpoint")
+		return
+	}
+	actor, ok := h.adminActor(w, r)
+	if !ok {
+		return
+	}
+	f, err := h.Diagrams.GetFile(r.Context(), actor, r.PathValue("id"))
+	if err != nil {
+		diagramProblem(w, r, err)
+		return
+	}
+	doc, err := application.DecodeDoc(f.Data)
+	if err != nil {
+		diagramProblem(w, r, err)
+		return
+	}
+	type pageJSON struct {
+		Name string `json:"name"`
+		SVG  string `json:"svg"`
+	}
+	pages := []pageJSON{}
+	for i := 0; ; i++ {
+		page, err := application.PickPage(doc, float64(i))
+		if err != nil || page == nil {
+			break
+		}
+		svg, err := core.ExportPage(core.NormalizePage(page), "svg")
+		if err != nil {
+			continue
+		}
+		name, _ := page["name"].(string)
+		pages = append(pages, pageJSON{Name: name, SVG: svg})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id": f.ID, "name": f.Name, "kind": f.Kind, "version": f.Version, "pages": pages,
+	})
 }

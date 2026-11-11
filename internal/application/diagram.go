@@ -852,6 +852,10 @@ func (d *Diagrams) GetFile(ctx context.Context, actor int, id string) (DiagramFi
 	ctx, span := tracer.Start(ctx, "Diagrams.GetFile")
 	defer span.End()
 	a, f, err := d.fileAccess(ctx, actor, id, diagram.RoleViewer)
+	if errors.Is(err, domain.ErrNotFound) && f.ID != "" && d.canRead(ctx) == nil {
+		// admins with diagrams.read/manage open any file read-only (admin panel "Open")
+		return DiagramFile{f, diagram.RoleViewer}, nil
+	}
 	return DiagramFile{f, a.role}, err
 }
 
