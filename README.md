@@ -305,3 +305,7 @@ Application codes live in `internal/interfaces/http/errors.go` (6xxx; errorx kee
 | GET | `/api/feed.xml`, `/api/users/{username}/feed.xml`, `/api/sitemap.xml` | | RSS, per-author RSS, sitemap |
 | **Ops** ||||
 | GET | `/api/healthz`, `/metrics`, `/api/docs/` | | Health, Prometheus, API console. `/metrics` is served on `METRICS_ADDR` (`:9090`); on `PORT` only with `METRICS_TOKEN` as a bearer token |
+
+## Licence
+
+Copyright © IWillBeGoogler. All rights reserved ([LICENSE](LICENSE)); the source is public to read, not to reuse. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).

@@ -1,0 +1,6 @@
+# Every change needs a review from the owner.
+* @bakhod1r
+# Licence, security and CI rules: owner only.
+/LICENSE @bakhod1r
+/SECURITY.md @bakhod1r
+/.github/ @bakhod1r
