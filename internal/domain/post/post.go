@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/glossary"
 )
 
 type Status string
@@ -28,34 +29,35 @@ const (
 // Post is the aggregate root. CategoryID/UserID 0 mean "none".
 // Body is Markdown; clients render it.
 type Post struct {
-	ID            int        `json:"id"`
-	Title         string     `json:"title"`
-	Subtitle      string     `json:"subtitle"`
-	Slug          string     `json:"slug"`
-	Status        Status     `json:"status"`
-	Body          string     `json:"body"`
-	BodyHTML      string     `json:"body_html,omitempty"` // sanitized; single-post reads only
-	ReadingTime   int        `json:"reading_time"`        // minutes
-	PublishAt     *time.Time `json:"publish_at,omitempty"`
-	PublishedAt   *time.Time `json:"published_at"`
-	Author        string     `json:"author"`
-	CategoryID    int        `json:"category_id"`    // primary: first of CategoryIDs
-	CategoryIDs   []int      `json:"category_ids"`   // every category, primary first
-	PublicationID int        `json:"publication_id"` // 0 = personal
-	UserID        int        `json:"user_id"`
-	CoverURL      string     `json:"cover_url"`
-	CanonicalURL  string     `json:"canonical_url"` // where the story first appeared
-	Tags          []string   `json:"tags"`
-	Labels        []Label    `json:"labels"`
-	Likes         int        `json:"likes"` // number of clappers
-	Claps         int        `json:"claps"` // total claps
-	CommentsCount int        `json:"comments_count"`
-	Views         int64      `json:"views"`
-	Liked         bool       `json:"liked"`      // by the current viewer
-	MyClaps       int        `json:"my_claps"`   // by the current viewer
-	Bookmarked    bool       `json:"bookmarked"` // by the current viewer
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID            int              `json:"id"`
+	Title         string           `json:"title"`
+	Subtitle      string           `json:"subtitle"`
+	Slug          string           `json:"slug"`
+	Status        Status           `json:"status"`
+	Body          string           `json:"body"`
+	BodyHTML      string           `json:"body_html,omitempty"` // sanitized; single-post reads only
+	ReadingTime   int              `json:"reading_time"`        // minutes
+	PublishAt     *time.Time       `json:"publish_at,omitempty"`
+	PublishedAt   *time.Time       `json:"published_at"`
+	Author        string           `json:"author"`
+	CategoryID    int              `json:"category_id"`    // primary: first of CategoryIDs
+	CategoryIDs   []int            `json:"category_ids"`   // every category, primary first
+	PublicationID int              `json:"publication_id"` // 0 = personal
+	UserID        int              `json:"user_id"`
+	CoverURL      string           `json:"cover_url"`
+	CanonicalURL  string           `json:"canonical_url"` // where the story first appeared
+	Tags          []string         `json:"tags"`
+	Labels        []Label          `json:"labels"`
+	Glossary      []glossary.Entry `json:"glossary"` // terms this article defines
+	Likes         int              `json:"likes"`    // number of clappers
+	Claps         int              `json:"claps"`    // total claps
+	CommentsCount int              `json:"comments_count"`
+	Views         int64            `json:"views"`
+	Liked         bool             `json:"liked"`      // by the current viewer
+	MyClaps       int              `json:"my_claps"`   // by the current viewer
+	Bookmarked    bool             `json:"bookmarked"` // by the current viewer
+	CreatedAt     time.Time        `json:"created_at"`
+	UpdatedAt     time.Time        `json:"updated_at"`
 }
 
 // IsPublic: listed, announced to followers and searchable.
@@ -70,7 +72,7 @@ func (p Post) Draft() Draft {
 	d := Draft{
 		Title: p.Title, Subtitle: p.Subtitle, Status: p.Status, PublishAt: p.PublishAt,
 		Body: p.Body, CategoryID: p.CategoryID, CategoryIDs: p.CategoryIDs, PublicationID: p.PublicationID,
-		CoverURL: p.CoverURL, CanonicalURL: p.CanonicalURL, Tags: p.Tags,
+		CoverURL: p.CoverURL, CanonicalURL: p.CanonicalURL, Tags: p.Tags, Glossary: p.Glossary,
 	}
 	for _, l := range p.Labels {
 		d.LabelIDs = append(d.LabelIDs, l.ID)
@@ -121,18 +123,19 @@ func NewLabel(name, color string) (Label, error) {
 
 // Draft is the editable part of a post. Empty Status means published.
 type Draft struct {
-	Title         string     `json:"title"`
-	Subtitle      string     `json:"subtitle"`
-	Status        Status     `json:"status"`
-	PublishAt     *time.Time `json:"publish_at"` // required when status is scheduled
-	Body          string     `json:"body"`
-	CategoryID    int        `json:"category_id"`    // primary; joins CategoryIDs
-	CategoryIDs   []int      `json:"category_ids"`   // up to 5, primary first
-	PublicationID int        `json:"publication_id"` // 0 = personal
-	CoverURL      string     `json:"cover_url"`
-	CanonicalURL  string     `json:"canonical_url"`
-	Tags          []string   `json:"tags"`
-	LabelIDs      []int      `json:"label_ids"`
+	Title         string           `json:"title"`
+	Subtitle      string           `json:"subtitle"`
+	Status        Status           `json:"status"`
+	PublishAt     *time.Time       `json:"publish_at"` // required when status is scheduled
+	Body          string           `json:"body"`
+	CategoryID    int              `json:"category_id"`    // primary; joins CategoryIDs
+	CategoryIDs   []int            `json:"category_ids"`   // up to 5, primary first
+	PublicationID int              `json:"publication_id"` // 0 = personal
+	CoverURL      string           `json:"cover_url"`
+	CanonicalURL  string           `json:"canonical_url"`
+	Tags          []string         `json:"tags"`
+	LabelIDs      []int            `json:"label_ids"`
+	Glossary      []glossary.Entry `json:"glossary"` // up to glossary.MaxEntries
 }
 
 const (
@@ -188,6 +191,11 @@ func (d Draft) Normalize(now time.Time) (Draft, error) {
 		!strings.HasPrefix(d.CanonicalURL, "https://") && !strings.HasPrefix(d.CanonicalURL, "http://")) {
 		return d, domain.Invalid("bad canonical_url")
 	}
+	g, err := glossary.NormalizeEntries(d.Glossary)
+	if err != nil {
+		return d, err
+	}
+	d.Glossary = g
 	d.Tags = normalizeTags(d.Tags)
 	if len(d.Tags) > maxTags {
 		return d, domain.Invalid("too many tags")

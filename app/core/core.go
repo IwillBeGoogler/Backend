@@ -156,6 +156,7 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 		Social:       postgres.NewSocialRepo(db),
 		Reports:      postgres.NewReportRepo(db),
 		Feedback:     postgres.NewFeedbackRepo(db),
+		Glossary:     postgres.NewGlossaryRepo(db),
 		ClientErrors: postgres.NewClientErrorRepo(db),
 		Publications: postgres.NewPublicationRepo(db),
 		Stats:        postgres.NewStatsRepo(db),

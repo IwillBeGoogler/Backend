@@ -197,6 +197,9 @@ func TestDiagramIntegrationsRepo(t *testing.T) {
 
 	t.Run("mcp audit", func(t *testing.T) {
 		d.RecordMCP(ctx, diagram.MCPAudit{UserID: ali.ID, TokenID: "tok_x", Tool: "read_file", FileID: fid, ProjectID: pid, Status: diagram.AuditOK, Detail: `{"fileId":"x"}`, DurationMS: 12})
+		// created_at has millisecond precision and ids are random, so entries in
+		// the same millisecond have no defined order: keep them apart.
+		time.Sleep(3 * time.Millisecond)
 		d.RecordMCP(ctx, diagram.MCPAudit{UserID: ali.ID, Tool: "add_nodes", Status: diagram.AuditDenied})
 		d.RecordMCP(ctx, diagram.MCPAudit{UserID: bob.ID, Tool: "list_projects", Status: diagram.AuditOK})
 		log, err := d.MCPAuditLog(ctx, ali.ID, 100)

@@ -13,6 +13,7 @@ import (
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/clienterror"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/comment"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/feedback"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/glossary"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/publication"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/readinglist"
@@ -47,6 +48,7 @@ type Repos struct {
 	Social       social.Repository
 	Reports      report.Repository
 	Feedback     feedback.Repository
+	Glossary     glossary.Repository
 	ClientErrors clienterror.Repository
 	Publications publication.Repository
 	Stats        StatsReader

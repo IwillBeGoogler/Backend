@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/glossary"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,7 +24,7 @@ const postCols = `p.id, p.title, p.subtitle, p.slug, p.status, p.body, p.reading
 	COALESCE((SELECT json_agg(json_build_object('id', l.id, 'name', l.name, 'color', l.color) ORDER BY l.name)
 		FROM post_labels pl JOIN labels l ON l.id = pl.label_id WHERE pl.post_id = p.id), '[]'),
 	p.created_at, p.updated_at, p.canonical_url,
-	ARRAY(SELECT pc.category_id FROM post_categories pc WHERE pc.post_id = p.id ORDER BY pc.position)`
+	ARRAY(SELECT pc.category_id FROM post_categories pc WHERE pc.post_id = p.id ORDER BY pc.position), p.glossary`
 
 // notHidden is a WHERE condition leaving out posts, authors and tags the
 // user in parameter param hid ("show less like this").
@@ -39,8 +40,12 @@ func scanPost(row pgx.Row, extra ...any) (post.Post, error) {
 	var p post.Post
 	dest := append([]any{&p.ID, &p.Title, &p.Subtitle, &p.Slug, &p.Status, &p.Body, &p.ReadingTime, &p.PublishAt,
 		&p.PublishedAt, &p.Author, &p.CategoryID, &p.PublicationID, &p.UserID, &p.CoverURL, &p.Tags, &p.Likes, &p.Claps, &p.CommentsCount,
-		&p.Labels, &p.CreatedAt, &p.UpdatedAt, &p.CanonicalURL, &p.CategoryIDs}, extra...)
-	return p, notFound(row.Scan(dest...))
+		&p.Labels, &p.CreatedAt, &p.UpdatedAt, &p.CanonicalURL, &p.CategoryIDs, &p.Glossary}, extra...)
+	err := row.Scan(dest...)
+	if p.Glossary == nil {
+		p.Glossary = []glossary.Entry{}
+	}
+	return p, notFound(err)
 }
 
 func (r *PostRepo) List(ctx context.Context, f post.Filter) (post.Page, error) {
@@ -185,11 +190,11 @@ func (r *PostRepo) Create(ctx context.Context, d post.Draft, authorID int, autho
 	var id int
 	err := pgx.BeginFunc(ctx, r.db, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `INSERT INTO posts (title, subtitle, slug, status, publish_at, body, reading_time,
-				published_at, author, category_id, user_id, cover_url, tags, publication_id, canonical_url)
+				published_at, author, category_id, user_id, cover_url, tags, publication_id, canonical_url, glossary)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $4 = 'published' THEN now() END,
-				$8, NULLIF($9, 0), NULLIF($10, 0), $11, $12, NULLIF($13, 0), $14) RETURNING id`,
+				$8, NULLIF($9, 0), NULLIF($10, 0), $11, $12, NULLIF($13, 0), $14, $15) RETURNING id`,
 			d.Title, d.Subtitle, post.NewSlug(d.Title), d.Status, d.PublishAt, d.Body, post.ReadingTime(d.Body),
-			author, d.CategoryID, authorID, d.CoverURL, d.Tags, d.PublicationID, d.CanonicalURL).Scan(&id)
+			author, d.CategoryID, authorID, d.CoverURL, d.Tags, d.PublicationID, d.CanonicalURL, glossaryJSON(d.Glossary)).Scan(&id)
 		if err != nil {
 			return err
 		}
@@ -258,11 +263,11 @@ func updatePost(ctx context.Context, tx pgx.Tx, id int, d post.Draft) error {
 	tag, err := tx.Exec(ctx, `UPDATE posts
 		SET title = $2, body = $3, category_id = NULLIF($4, 0), cover_url = $5, tags = $6,
 			subtitle = $7, status = $8, reading_time = $9, publish_at = $10, publication_id = NULLIF($11, 0),
-			canonical_url = $12, updated_at = now(),
+			canonical_url = $12, glossary = $13, updated_at = now(),
 			published_at = CASE WHEN $8 = 'published' THEN COALESCE(published_at, now()) END
 		WHERE id = $1`,
 		id, d.Title, d.Body, d.CategoryID, d.CoverURL, d.Tags, d.Subtitle, d.Status, post.ReadingTime(d.Body), d.PublishAt, d.PublicationID,
-		d.CanonicalURL)
+		d.CanonicalURL, glossaryJSON(d.Glossary))
 	if err != nil {
 		return err
 	}
@@ -517,4 +522,12 @@ func (r *PostRepo) DailyReads(ctx context.Context, postID int, since time.Time) 
 		out[day] = n
 	}
 	return out, rows.Err()
+}
+
+// glossaryJSON is the article's terms as a JSON array; nil is [], never null.
+func glossaryJSON(g []glossary.Entry) []glossary.Entry {
+	if g == nil {
+		return []glossary.Entry{}
+	}
+	return g
 }

@@ -224,7 +224,7 @@ func (b *Blog) RestoreRevision(ctx context.Context, actor user.User, postID, ver
 	d := post.Draft{
 		Title: v.Title, Subtitle: v.Subtitle, Body: v.Body,
 		Status: p.Status, PublishAt: p.PublishAt, CategoryID: p.CategoryID, PublicationID: p.PublicationID,
-		CoverURL: p.CoverURL, CanonicalURL: p.CanonicalURL, Tags: p.Tags,
+		CoverURL: p.CoverURL, CanonicalURL: p.CanonicalURL, Tags: p.Tags, Glossary: p.Glossary,
 	}
 	for _, l := range p.Labels {
 		d.LabelIDs = append(d.LabelIDs, l.ID)

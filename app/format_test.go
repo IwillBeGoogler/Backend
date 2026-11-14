@@ -66,8 +66,9 @@ func TestResponseFormat(t *testing.T) {
 	if meta := body["meta"].(map[string]any); meta["has_more"] != false || len(body["data"].([]any)) != 1 {
 		t.Errorf("last page: %v", body)
 	}
-	// Empty lists are [], never null; small lists have no meta.
-	_, _, body = anon.raw("GET", "/api/categories", "", nil)
+	// Empty lists are [], never null; small lists have no meta. (Categories are
+	// seeded by migration 00052, so use the glossary, which starts empty.)
+	_, _, body = anon.raw("GET", "/api/glossary", "", nil)
 	if l, ok := body["data"].([]any); !ok || len(l) != 0 || body["meta"] != nil {
 		t.Errorf("empty list: %v", body)
 	}

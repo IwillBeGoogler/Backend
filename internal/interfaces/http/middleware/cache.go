@@ -160,7 +160,7 @@ func cacheKeyURI(r *http.Request) string {
 // query cannot fill Redis, and no parameter is ever silently ignored in the
 // key. Add new parameters here when a handler starts reading one.
 var cacheQueryParams = map[string]bool{
-	"category": true, "cursor": true, "days": true, "label": true, "limit": true,
+	"category": true, "cursor": true, "days": true, "label": true, "lang": true, "limit": true,
 	"page": true, "post_id": true, "q": true, "status": true, "tag": true,
 }
 

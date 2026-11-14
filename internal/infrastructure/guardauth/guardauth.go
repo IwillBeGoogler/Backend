@@ -361,6 +361,7 @@ var permissionDocs = map[string]string{
 	"upload.create":      "upload images",
 	"category.write":     "manage categories",
 	"label.write":        "manage labels",
+	"glossary.write":     "manage glossary terms",
 	"stats.read":         "read site stats",
 	"user.read":          "list users",
 	"user.ban":           "ban and suspend users",
