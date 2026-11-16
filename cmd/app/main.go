@@ -142,7 +142,7 @@ func healthcheck() int {
 	if err != nil {
 		return 1
 	}
-	resp, err := c.Do(req)
+	resp, err := c.Do(req) //nolint:gosec // loopback healthcheck, port from own env
 	if err != nil {
 		return 1
 	}
