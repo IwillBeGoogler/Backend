@@ -14,8 +14,8 @@ import (
 	"github.com/hibiken/asynq"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
 )
 
 type memStorage struct{ objs map[string][]byte }
