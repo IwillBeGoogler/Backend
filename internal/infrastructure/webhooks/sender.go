@@ -93,7 +93,7 @@ func (s *Sender) CheckURL(ctx context.Context, raw string) error {
 func (s *Sender) Send(ctx context.Context, r application.WebhookRequest) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.URL, bytes.NewReader(r.Body))
 	if err != nil {
-		return 0, fmt.Errorf("%w: %v", application.ErrWebhookURL, err)
+		return 0, fmt.Errorf("%w: %w", application.ErrWebhookURL, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", userAgent)
@@ -107,7 +107,7 @@ func (s *Sender) Send(ctx context.Context, r application.WebhookRequest) (int, e
 	if err != nil {
 		attempts.WithLabelValues(resultOf(0, err)).Inc()
 		if errors.Is(err, netguard.ErrBlocked) {
-			return 0, fmt.Errorf("%w: %v", application.ErrWebhookURL, err)
+			return 0, fmt.Errorf("%w: %w", application.ErrWebhookURL, err)
 		}
 		return 0, err
 	}

@@ -193,7 +193,7 @@ func NewWorker(rdb *redis.Client, h Handlers) *Worker {
 	mux.HandleFunc(TypeSendEmail, func(ctx context.Context, t *asynq.Task) error {
 		var m application.Email
 		if err := json.Unmarshal(t.Payload(), &m); err != nil {
-			return fmt.Errorf("%w: %v", asynq.SkipRetry, err)
+			return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
 		}
 		id, _ := asynq.GetTaskID(ctx)
 		return sendEmail(ctx, redisSentLog{rdb}, h.Mailer, id, m)
@@ -201,7 +201,7 @@ func NewWorker(rdb *redis.Client, h Handlers) *Worker {
 	mux.HandleFunc(TypeThumbnail, func(ctx context.Context, t *asynq.Task) error {
 		var p keyPayload
 		if err := json.Unmarshal(t.Payload(), &p); err != nil {
-			return fmt.Errorf("%w: %v", asynq.SkipRetry, err)
+			return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
 		}
 		return thumbnail(ctx, h.Storage, p.Key)
 	})
@@ -261,7 +261,7 @@ func withID(fn func(context.Context, int) error) asynq.HandlerFunc {
 	return func(ctx context.Context, t *asynq.Task) error {
 		var p idPayload
 		if err := json.Unmarshal(t.Payload(), &p); err != nil {
-			return fmt.Errorf("%w: %v", asynq.SkipRetry, err)
+			return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
 		}
 		return fn(ctx, p.ID)
 	}
@@ -365,7 +365,7 @@ func classifyMailErr(err error) error {
 func thumbnail(ctx context.Context, st application.Storage, key string) error {
 	obj, err := st.Get(ctx, key)
 	if errors.Is(err, domain.ErrNotFound) {
-		return fmt.Errorf("%w: %v", asynq.SkipRetry, err)
+		return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
 	}
 	if err != nil {
 		return err

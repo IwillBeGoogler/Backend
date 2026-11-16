@@ -80,7 +80,7 @@ func TestVaultFetchServerBehaviours(t *testing.T) {
 	}
 	if err := run(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "revoke-self") {
-			w.WriteHeader(500)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		if strings.Contains(r.URL.Path, "login") {
@@ -91,7 +91,7 @@ func TestVaultFetchServerBehaviours(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "revoke") {
 		t.Errorf("revoke failure: %v", err)
 	}
-	if err := run(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(403) }); err == nil || !strings.Contains(err.Error(), "login") {
+	if err := run(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusForbidden) }); err == nil || !strings.Contains(err.Error(), "login") {
 		t.Errorf("login refused: %v", err)
 	}
 }

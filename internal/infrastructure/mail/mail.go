@@ -14,10 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/telemetry"
 )
 
 // TLS modes of the SMTP connection.
@@ -108,10 +109,10 @@ func (s SMTP) send(ctx context.Context, to string, msg []byte) error {
 		return fmt.Errorf("smtp dial: %w", err)
 	}
 	if dl, ok := ctx.Deadline(); ok {
-		conn.SetDeadline(dl)
+		_ = conn.SetDeadline(dl)
 	}
 	// Abort blocked I/O if ctx is cancelled before the deadline.
-	stop := context.AfterFunc(ctx, func() { conn.SetDeadline(time.Now()) })
+	stop := context.AfterFunc(ctx, func() { _ = conn.SetDeadline(time.Now()) })
 	defer stop()
 	c, err := smtp.NewClient(conn, host)
 	if err != nil {

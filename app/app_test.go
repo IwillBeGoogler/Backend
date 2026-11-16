@@ -19,14 +19,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/app"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 	"github.com/gen2brain/webp"
 	"github.com/testcontainers/testcontainers-go"
 	tcminio "github.com/testcontainers/testcontainers-go/modules/minio"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/app"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 )
 
 type env struct {
@@ -454,7 +455,7 @@ func TestPostsCommentsAndSocial(t *testing.T) {
 		must(t, err)
 		body, _ := io.ReadAll(res.Body)
 		res.Body.Close()
-		if res.StatusCode != 200 || !strings.Contains(string(body), "/"+p.Slug+"<") || !strings.Contains(string(body), "http://site.test/@") {
+		if res.StatusCode != http.StatusOK || !strings.Contains(string(body), "/"+p.Slug+"<") || !strings.Contains(string(body), "http://site.test/@") {
 			t.Errorf("%s: %d %s", path, res.StatusCode, body)
 		}
 	}
@@ -902,13 +903,13 @@ func TestVerifyCommentLikesTagsRSSMarkdown(t *testing.T) {
 	must(t, err)
 	rss, _ := io.ReadAll(res.Body)
 	res.Body.Close()
-	if res.StatusCode != 200 || !strings.Contains(string(rss), "<title>Kube</title>") {
+	if res.StatusCode != http.StatusOK || !strings.Contains(string(rss), "<title>Kube</title>") {
 		t.Errorf("user rss: %d %s", res.StatusCode, rss)
 	}
 	res, err = http.Get(e.srv.URL + "/api/users/nobody/feed.xml")
 	must(t, err)
 	res.Body.Close()
-	if res.StatusCode != 404 {
+	if res.StatusCode != http.StatusNotFound {
 		t.Errorf("unknown user rss = %d", res.StatusCode)
 	}
 }
@@ -1068,7 +1069,7 @@ func TestUploadsToMinIO(t *testing.T) {
 		fw, _ := mw.CreateFormFile("file", name)
 		fw.Write(data)
 		mw.Close()
-		req, _ := http.NewRequest("POST", ali.base+"/api/uploads", &buf)
+		req, _ := http.NewRequest(http.MethodPost, ali.base+"/api/uploads", &buf)
 		req.Header.Set("Content-Type", mw.FormDataContentType())
 		var raw struct {
 			URL          string            `json:"url"`
@@ -1086,7 +1087,7 @@ func TestUploadsToMinIO(t *testing.T) {
 	must(t, err)
 	res.Body.Close()
 	// a PNG is stored as WebP
-	if res.StatusCode != 200 || res.Header.Get("Content-Type") != "image/webp" || !strings.HasSuffix(u.URL, ".webp") {
+	if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != "image/webp" || !strings.HasSuffix(u.URL, ".webp") {
 		t.Fatalf("GET %s: %d %s", u.URL, res.StatusCode, res.Header.Get("Content-Type"))
 	}
 	eventually(t, "thumbnail", func() bool {
@@ -1095,7 +1096,7 @@ func TestUploadsToMinIO(t *testing.T) {
 			return false
 		}
 		defer res.Body.Close()
-		if res.StatusCode != 200 {
+		if res.StatusCode != http.StatusOK {
 			return false
 		}
 		thumb, _, err := image.Decode(res.Body)

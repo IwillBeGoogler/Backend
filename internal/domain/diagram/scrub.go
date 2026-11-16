@@ -16,8 +16,6 @@ type PrivateSet struct {
 	Edges []json.RawMessage
 }
 
-func (s PrivateSet) empty() bool { return len(s.Nodes) == 0 && len(s.Edges) == 0 }
-
 // object reads a JSON object; ok is false for anything else.
 func object(raw json.RawMessage) (map[string]json.RawMessage, bool) {
 	var m map[string]json.RawMessage

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/glossary"
 )
 
 func TestNewLabel(t *testing.T) {
@@ -192,5 +194,40 @@ func TestLiveEdgeCases(t *testing.T) {
 	// A backtick fence whose info string holds a backtick is inline code, not a fence.
 	if got := LiveBlocks("```html-live `x`\ncode\n```"); len(got) != 0 {
 		t.Errorf("%+v", got)
+	}
+}
+
+func TestDraftCategoryIDsGlossaryAndAuthorStats(t *testing.T) {
+	now := time.Now()
+	p := Post{
+		Title: "T", Subtitle: "S", Status: StatusPublished, Body: "B",
+		CategoryID: 1, CategoryIDs: []int{2, 3}, Labels: []Label{{ID: 4, Name: "L"}, {ID: 5, Name: "M"}},
+	}
+	d := p.Draft()
+	if d.CategoryID != 0 || len(d.CategoryIDs) != 2 || len(d.LabelIDs) != 2 {
+		t.Fatalf("Draft() = %+v", d)
+	}
+	norm, err := (Draft{Title: "T", CategoryID: 1, CategoryIDs: []int{1, 2}}).Normalize(now)
+	if err != nil || len(norm.CategoryIDs) != 2 || norm.CategoryID != 1 {
+		t.Fatalf("Normalize categories = %+v, %v", norm, err)
+	}
+	for name, bad := range map[string]Draft{
+		"bad cat id":   {Title: "T", CategoryIDs: []int{0}},
+		"too many cat": {Title: "T", CategoryIDs: []int{1, 2, 3, 4, 5, 6}},
+		"bad glossary": {Title: "T", Glossary: []glossary.Entry{{Term: " ", Definition: "d"}}},
+	} {
+		if _, err := bad.Normalize(now); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+
+	s := AuthorStat{ReadSeconds: 120}
+	s.SetSessions(0)
+	if s.AvgReadSecs != 0 {
+		t.Fatalf("SetSessions(0) = %v", s.AvgReadSecs)
+	}
+	s.SetSessions(4)
+	if s.AvgReadSecs != 30 {
+		t.Fatalf("SetSessions(4) = %v", s.AvgReadSecs)
 	}
 }

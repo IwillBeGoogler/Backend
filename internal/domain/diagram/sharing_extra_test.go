@@ -161,7 +161,11 @@ func TestSharingErrorConstructors(t *testing.T) {
 
 func TestLibraryConflict(t *testing.T) {
 	var err error = &diagram.LibraryConflict{}
-	if !errors.Is(err, diagram.ErrLibraryConflict) || err.Error() == "" || err.(*diagram.LibraryConflict).Code() != "LIBRARY_CONFLICT" {
+	if !errors.Is(err, diagram.ErrLibraryConflict) || err.Error() == "" || func() *diagram.LibraryConflict {
+		target := &diagram.LibraryConflict{}
+		_ = errors.As(err, &target)
+		return target
+	}().Code() != "LIBRARY_CONFLICT" {
 		t.Fatal("LibraryConflict")
 	}
 	if errors.Is(err, errors.New("other")) {

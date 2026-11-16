@@ -19,7 +19,7 @@ func guardReply(status int, ctype, body string) http.Handler {
 
 func serve(h http.Handler) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("GET", "/api/guard/x", nil))
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/guard/x", nil))
 	return rec
 }
 
@@ -69,7 +69,7 @@ func TestGuardFormatPassesOtherResponses(t *testing.T) {
 	// Implicit 200 on first Write, and Flush reaches the real writer.
 	h := GuardFormat(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("plain"))
-		w.WriteHeader(500) // ignored: already decided
+		w.WriteHeader(http.StatusInternalServerError) // ignored: already decided
 		http.NewResponseController(w).Flush()
 	}))
 	rec = serve(h)

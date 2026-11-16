@@ -18,11 +18,12 @@ import (
 	"syscall"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/net/html"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/netguard"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"golang.org/x/net/html"
 )
 
 const (

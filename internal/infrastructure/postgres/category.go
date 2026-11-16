@@ -3,11 +3,12 @@ package postgres
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CategoryRepo struct{ db *pgxpool.Pool }

@@ -129,7 +129,7 @@ func OpenSQLite(path string) (Source, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(context.Background()); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
@@ -143,7 +143,7 @@ func (s sqliteSource) Has(ctx context.Context, table string) (bool, error) {
 }
 
 func (s sqliteSource) Select(ctx context.Context, table, where string, args ...any) ([]Row, error) {
-	q := "SELECT * FROM " + table
+	q := "SELECT * FROM " + table //nolint:gosec // operator-supplied CLI table/where, not request input
 	if where != "" {
 		q += " WHERE " + where
 	}

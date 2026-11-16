@@ -86,7 +86,7 @@ func parse(s string, filter bool) (Topic, bool) {
 		if ok && !id(t.ProjectID, false) {
 			ok = false
 		}
-		if ok && t.Kind == ProjectRoster && !(id(t.FileID, filter) && id(t.ClientID, filter)) {
+		if ok && t.Kind == ProjectRoster && (!id(t.FileID, filter) || !id(t.ClientID, filter)) {
 			ok = false
 		}
 	case "f":

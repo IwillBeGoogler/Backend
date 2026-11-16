@@ -378,7 +378,7 @@ func printStates(page Obj, out *[]string) {
 			a = append(a, "vertical")
 		}
 		line := ind + kind + " " + word(id)
-		if label != "" && !(kind == "state" && label == id) {
+		if label != "" && (kind != "state" || label != id) {
 			line += " " + quote(label)
 		}
 		if len(a) > 0 {
@@ -450,9 +450,10 @@ func printUseCases(page Obj, out *[]string) {
 		u := umlOf(e)
 		kind := jsStr(u["kind"])
 		op := kind
-		if kind == "association" {
+		switch kind {
+		case "association":
 			op = "--"
-		} else if kind == "generalization" {
+		case "generalization":
 			op = "generalizes"
 		}
 		label := ""
@@ -496,9 +497,10 @@ func printComponents(page Obj, out *[]string) {
 		d := dataOf(n)
 		var provides, requires []string
 		for _, p := range objs(d["ports"]) {
-			if p["kind"] == "provided" {
+			switch p["kind"] {
+			case "provided":
 				provides = append(provides, word(jsStr(p["name"])))
-			} else if p["kind"] == "required" {
+			case "required":
 				requires = append(requires, word(jsStr(p["name"])))
 			}
 		}

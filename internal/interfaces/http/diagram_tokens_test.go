@@ -139,7 +139,7 @@ func TestDiagramTokenLifecycle(t *testing.T) {
 		t.Errorf("scopes are de-duplicated: %v", item["scopes"])
 	}
 	exp, _ := item["expiresAt"].(float64)
-	if d := time.UnixMilli(int64(exp)).Sub(time.Now()); d < 29*24*time.Hour || d > 31*24*time.Hour {
+	if d := time.Until(time.UnixMilli(int64(exp))); d < 29*24*time.Hour || d > 31*24*time.Hour {
 		t.Errorf("expiresAt = %v", item["expiresAt"])
 	}
 	if _, leaked := item["hash"]; leaked || strings.Contains(r.Header.Get("Location"), secret) {

@@ -7,11 +7,12 @@ import (
 	"io"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 )
 
 type MinIO struct {

@@ -108,7 +108,11 @@ func TestErrorKinds(t *testing.T) {
 	if !errors.As(diagram.ErrParentNotFound, &v) {
 		t.Error("PARENT_NOT_FOUND must be a validation error")
 	}
-	if e := diagram.VersionConflict(4, false).(*diagram.Error); e.Current != 4 {
+	if e := func() *diagram.Error {
+		target := &diagram.Error{}
+		_ = errors.As(diagram.VersionConflict(4, false), &target)
+		return target
+	}(); e.Current != 4 {
 		t.Errorf("Current = %d", e.Current)
 	}
 }

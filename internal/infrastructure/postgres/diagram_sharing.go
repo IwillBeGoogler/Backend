@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
-	"github.com/jackc/pgx/v5"
 )
 
 // Members, share links, assets, libraries and private stickies

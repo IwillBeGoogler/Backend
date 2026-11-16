@@ -94,7 +94,7 @@ func (s *Service) withPostgres(ctx context.Context, t diagram.DBTarget, fn func(
 	cfg.ConnectTimeout = ConnectTimeout
 	cfg.TLSConfig, cfg.Fallbacks = nil, nil
 	if t.SSL {
-		cfg.TLSConfig = &tls.Config{InsecureSkipVerify: true, ServerName: t.Host} // like the Node server: encrypted, not verified
+		cfg.TLSConfig = &tls.Config{InsecureSkipVerify: true, ServerName: t.Host} //nolint:gosec // like the Node server: encrypted, not verified
 	}
 	cfg.RuntimeParams = map[string]string{"application_name": "sdd-introspect"}
 	d := s.dialer()

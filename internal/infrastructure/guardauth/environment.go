@@ -62,11 +62,11 @@ func AccessGate(g *guard.Guard, clientIP func(*http.Request) string, loc *time.L
 			owner.APIKey = nil
 			d, err := g.Authorize(r.Context(), &owner, "access", guard.Resource{Type: "app"}, env)
 			if err != nil {
-				errorx.WriteProblemRequest(w, r, errorx.New(errorx.ErrInternal, "access gate"))
+				_ = errorx.WriteProblemRequest(w, r, errorx.New(errorx.ErrInternal, "access gate"))
 				return
 			}
 			if !d.Allowed {
-				errorx.WriteProblemRequest(w, r, errorx.New(errorx.ErrForbidden, "access_closed").
+				_ = errorx.WriteProblemRequest(w, r, errorx.New(errorx.ErrForbidden, "access_closed").
 					WithDetails("access is closed for this account at this time or from this network"))
 				return
 			}

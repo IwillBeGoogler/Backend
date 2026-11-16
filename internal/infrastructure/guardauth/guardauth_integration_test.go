@@ -340,7 +340,7 @@ func TestGuardAuth(t *testing.T) {
 	must(t, guardauth.SeedAccessRules(ctx, g, ipRules))
 	must(t, guardauth.SeedAccessRules(ctx, g, ipRules)) // update-in-place path
 	gate := func(ip string, method, path, token string) int {
-		var next http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
+		var next http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 		next = guardauth.AccessGate(g, func(*http.Request) string { return ip }, time.UTC)(next)
 		next = httpguard.Authenticate(g, httpguard.Options{})(next)
 		r := httptest.NewRequest(method, path, nil)

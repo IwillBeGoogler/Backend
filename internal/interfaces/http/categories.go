@@ -3,8 +3,9 @@ package http
 import (
 	"net/http"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 	"strconv"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 )
 
 type labelInput struct {

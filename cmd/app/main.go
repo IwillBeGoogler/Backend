@@ -50,10 +50,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer shutdownTelemetry(context.Background())
+	defer func() { _ = shutdownTelemetry(context.Background()) }()
 	// Rebuild now that OTel is up: adds the OTLP log pipeline when enabled.
 	logger := telemetry.NewLogger()
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 	zap.ReplaceGlobals(logger)
 	slog.SetDefault(slog.New(zapslog.NewHandler(logger.Core()))) // libraries logging via slog
 
@@ -117,7 +117,7 @@ func run() error {
 		defer func() {
 			mctx, mcancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer mcancel()
-			metrics.Shutdown(mctx)
+			_ = metrics.Shutdown(mctx)
 		}()
 	}
 	if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -138,7 +138,11 @@ func healthcheck() int {
 		port = "8080"
 	}
 	c := http.Client{Timeout: 2 * time.Second}
-	resp, err := c.Get("http://127.0.0.1:" + port + "/api/healthz")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://127.0.0.1:"+port+"/api/healthz", nil) //nolint:gosec // loopback healthcheck, port from own env
+	if err != nil {
+		return 1
+	}
+	resp, err := c.Do(req)
 	if err != nil {
 		return 1
 	}

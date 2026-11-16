@@ -735,7 +735,7 @@ func Sniff(b []byte, name string, lim Limits) (Sniffed, error) {
 			}
 			return Sniffed{Kind: KindFile}, nil
 		}
-		return Sniffed{Kind: KindFile}, nil // the file reader says exactly what is wrong
+		return Sniffed{Kind: KindFile}, nil //nolint:nilerr // the file reader says exactly what is wrong
 	}
 	if text, ok := DecodeText(b); ok {
 		for _, line := range strings.Split(text, "\n") {

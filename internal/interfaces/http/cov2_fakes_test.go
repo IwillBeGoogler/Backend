@@ -276,6 +276,11 @@ func (f *zUsers) UpdateProfile(ctx context.Context, id int, u user.ProfileUpdate
 	return
 }
 
+func (f *zUsers) SetUsername(ctx context.Context, id int, username string) (r0 user.User, r1 error) {
+	r1 = f.c.err
+	return
+}
+
 func (f *zUsers) Follow(ctx context.Context, followerID int, followeeID int) (r0 bool, r1 error) {
 	r1 = f.c.err
 	return

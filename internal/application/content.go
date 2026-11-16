@@ -118,7 +118,7 @@ func (b *Blog) mention(ctx context.Context, names []string, n social.Notificatio
 			to = append(to, id)
 		}
 	}
-	b.notify(ctx, n, to...)
+	_ = b.notify(ctx, n, to...)
 }
 
 // Revisions

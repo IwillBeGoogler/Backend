@@ -19,19 +19,19 @@ func TestCursorRoundTrip(t *testing.T) {
 	if err != nil || len(got) != 2 || got[0] != 5 || got[1] != 42 {
 		t.Fatalf("%v %v", got, err)
 	}
-	if _, err := DecodeCursor("!!!", 1); err != ErrBadCursor {
+	if _, err := DecodeCursor("!!!", 1); !errors.Is(err, ErrBadCursor) {
 		t.Error("bad base64")
 	}
-	if _, err := DecodeCursor(c, 3); err != ErrBadCursor {
+	if _, err := DecodeCursor(c, 3); !errors.Is(err, ErrBadCursor) {
 		t.Error("wrong part count")
 	}
 	for _, bad := range []string{EncodeCursor(0), EncodeCursor(-3)} {
-		if _, err := DecodeCursor(bad, 1); err != ErrBadCursor {
+		if _, err := DecodeCursor(bad, 1); !errors.Is(err, ErrBadCursor) {
 			t.Errorf("nonpositive %q", bad)
 		}
 	}
 	// non-numeric field
-	if _, err := DecodeCursor("YWJj", 1); err != ErrBadCursor {
+	if _, err := DecodeCursor("YWJj", 1); !errors.Is(err, ErrBadCursor) {
 		t.Error("non numeric")
 	}
 }

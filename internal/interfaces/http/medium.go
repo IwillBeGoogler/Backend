@@ -1,10 +1,11 @@
 package http
 
 import (
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/http/middleware"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/readinglist"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/social"

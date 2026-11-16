@@ -160,7 +160,7 @@ func TestResponseFormat(t *testing.T) {
 	}
 
 	// Server-sent events carry the same {"data": ...} envelope.
-	req, _ := http.NewRequest("GET", anon.base+"/api/me/notifications/stream", nil)
+	req, _ := http.NewRequest(http.MethodGet, anon.base+"/api/me/notifications/stream", nil)
 	req.Header.Set("Authorization", "Bearer "+ali.token)
 	res, err := http.DefaultClient.Do(req)
 	must(t, err)

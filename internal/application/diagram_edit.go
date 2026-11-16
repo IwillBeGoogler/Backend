@@ -111,9 +111,8 @@ func (d *Diagrams) UndoMCPChange(ctx context.Context, actor int, fileID string) 
 		return 0, 0, ErrNothingToUndo
 	}
 	var prev *diagram.Version
-	for i := at + 1; i < len(versions); i++ {
-		prev = &versions[i]
-		break
+	if at+1 < len(versions) {
+		prev = &versions[at+1]
 	}
 	if prev == nil {
 		return 0, 0, errors.New("no earlier version to go back to")

@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 	"github.com/bakhod1r/guard/ratelimit"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 )
 
 func TestLimitWithFailsClosedOnlyForSensitiveKeys(t *testing.T) {
@@ -53,7 +54,7 @@ func TestDocsDisabledInProductionWithoutKey(t *testing.T) {
 	mux := http.NewServeMux()
 	mountDocs(mux, config.Config{Env: "production"})
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequest("GET", "/api/docs/", nil))
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/docs/", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("docs served without DOCS_KEY: %d", rec.Code)
 	}

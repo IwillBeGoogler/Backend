@@ -2,6 +2,7 @@ package images
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/png"
 	"testing"
@@ -17,11 +18,11 @@ func covPNG(t *testing.T) []byte {
 }
 
 func TestCovValidateGarbageAndTruncated(t *testing.T) {
-	if err := Validate([]byte("not an image")); err != ErrInvalid {
+	if err := Validate([]byte("not an image")); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("garbage: %v", err)
 	}
 	p := covPNG(t)
-	if err := Validate(p[:len(p)/2]); err != ErrInvalid {
+	if err := Validate(p[:len(p)/2]); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("truncated: %v", err)
 	}
 	if err := Validate(p); err != nil {

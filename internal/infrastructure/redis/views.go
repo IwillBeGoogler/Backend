@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -42,7 +43,7 @@ func (v Views) Counts(ctx context.Context, postIDs []int) map[int]int64 {
 	for i, id := range postIDs {
 		cmds[i] = pipe.PFCount(ctx, viewsKey(id))
 	}
-	pipe.Exec(ctx) // per-command errors read below; missing keys count 0
+	_, _ = pipe.Exec(ctx) // per-command errors read below; missing keys count 0
 	out := make(map[int]int64, len(postIDs))
 	for i, c := range cmds {
 		out[postIDs[i]], _ = c.Result()
@@ -76,7 +77,7 @@ func (v Views) Trending(ctx context.Context, days, limit int) ([]int, error) {
 	cache.Del(ctx, cacheKey)
 	cache.RPush(ctx, cacheKey, append([]any{"*"}, toAny(ids)...)...)
 	cache.Expire(ctx, cacheKey, trendingCacheTTL)
-	cache.Exec(ctx) // best effort
+	_, _ = cache.Exec(ctx) // best effort
 	return atois(ids), nil
 }
 
@@ -107,7 +108,7 @@ func (v Views) Daily(ctx context.Context, postID int, days []time.Time) ([]int64
 	for i, d := range days {
 		cmds[i] = pipe.ZScore(ctx, dayKey(d), strconv.Itoa(postID))
 	}
-	if _, err := pipe.Exec(ctx); err != nil && err != redis.Nil {
+	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
 		return nil, err
 	}
 	out := make([]int64, len(days))
@@ -130,7 +131,7 @@ func dailyTotals(ctx context.Context, rdb *redis.Client, key func(time.Time) str
 	for i, d := range days {
 		cmds[i] = pipe.ZRangeWithScores(ctx, key(d), 0, -1)
 	}
-	if _, err := pipe.Exec(ctx); err != nil && err != redis.Nil {
+	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, redis.Nil) {
 		return nil, err
 	}
 	out := make([]int64, len(days))

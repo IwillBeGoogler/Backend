@@ -135,7 +135,7 @@ func parseTimingLine(tm *DslTiming, src string, ln int, diag func(l, c int, m, s
 			t := toks[i]
 			if t.k == "word" && t.v == "states" {
 				i++
-				for i < len(toks) && !(toks[i].k == "word" && i+1 < len(toks) && toks[i+1].v == "=") {
+				for i < len(toks) && (toks[i].k != "word" || i+1 >= len(toks) || toks[i+1].v != "=") {
 					if toks[i].k != "sym" {
 						states = append(states, toks[i].v)
 					}

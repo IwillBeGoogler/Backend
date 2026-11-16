@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 )
 
 type UserRepo struct{ db *pgxpool.Pool }
@@ -96,6 +97,10 @@ func (r *UserRepo) Profile(ctx context.Context, username string, viewerID int) (
 func (r *UserRepo) UpdateProfile(ctx context.Context, id int, u user.ProfileUpdate) (user.User, error) {
 	return scanUser(r.db.QueryRow(ctx, `UPDATE users SET display_name = $2, bio = $3, avatar_url = $4
 		WHERE id = $1 RETURNING `+userCols, id, u.DisplayName, u.Bio, u.AvatarURL))
+}
+
+func (r *UserRepo) SetUsername(ctx context.Context, id int, username string) (user.User, error) {
+	return scanUser(r.db.QueryRow(ctx, `UPDATE users SET username = $2 WHERE id = $1 RETURNING `+userCols, id, username))
 }
 
 func (r *UserRepo) Follow(ctx context.Context, followerID, followeeID int) (bool, error) {

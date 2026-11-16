@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -71,23 +72,23 @@ func TestTakeBranches(t *testing.T) {
 	rdb := redisClient(t)
 	ctx := context.Background()
 	b := newBase("x", rdb)
-	if _, err := b.take(ctx, "", "c"); err != ErrFlow {
+	if _, err := b.take(ctx, "", "c"); !errors.Is(err, ErrFlow) {
 		t.Errorf("empty state: %v", err)
 	}
-	if _, err := b.take(ctx, "s", ""); err != ErrFlow {
+	if _, err := b.take(ctx, "s", ""); !errors.Is(err, ErrFlow) {
 		t.Errorf("empty code: %v", err)
 	}
-	if _, err := b.take(ctx, "missing", "c"); err != ErrFlow {
+	if _, err := b.take(ctx, "missing", "c"); !errors.Is(err, ErrFlow) {
 		t.Errorf("missing: %v", err)
 	}
 	rdb.Set(ctx, b.key("bad"), "{not json", time.Minute)
-	if _, err := b.take(ctx, "bad", "c"); err != ErrFlow {
+	if _, err := b.take(ctx, "bad", "c"); !errors.Is(err, ErrFlow) {
 		t.Errorf("bad json: %v", err)
 	}
 	// Redis error (cancelled context) is propagated, not ErrFlow.
 	cctx, cancel := context.WithCancel(ctx)
 	cancel()
-	if _, err := b.take(cctx, "s", "c"); err == nil || err == ErrFlow {
+	if _, err := b.take(cctx, "s", "c"); err == nil || errors.Is(err, ErrFlow) {
 		t.Errorf("redis error: %v", err)
 	}
 	if _, _, err := b.begin(cctx); err == nil {
@@ -104,11 +105,11 @@ func TestGitHub(t *testing.T) {
 	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		if r.Form.Get("code") == "badcode" {
-			http.Error(w, "nope", 400)
+			http.Error(w, "nope", http.StatusBadRequest)
 			return
 		}
 		if r.Form.Get("code_verifier") == "" {
-			http.Error(w, "no verifier", 400)
+			http.Error(w, "no verifier", http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -116,7 +117,7 @@ func TestGitHub(t *testing.T) {
 	})
 	mux.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer tok" {
-			http.Error(w, "auth", 401)
+			http.Error(w, "auth", http.StatusUnauthorized)
 			return
 		}
 		if userStatus != 200 {
@@ -162,7 +163,7 @@ func TestGitHub(t *testing.T) {
 	if _, err := gh.Finish(ctx, s, "good"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := gh.Finish(ctx, s, "good"); err != ErrFlow {
+	if _, err := gh.Finish(ctx, s, "good"); !errors.Is(err, ErrFlow) {
 		t.Errorf("replay: %v", err)
 	}
 
@@ -185,7 +186,7 @@ func TestGitHub(t *testing.T) {
 	if _, err := gh.Finish(ctx, begin(), "good"); err == nil || !strings.Contains(err.Error(), "/user/emails") {
 		t.Errorf("emails: %v", err)
 	}
-	if _, err := gh.Finish(ctx, "", "x"); err != ErrFlow {
+	if _, err := gh.Finish(ctx, "", "x"); !errors.Is(err, ErrFlow) {
 		t.Errorf("empty: %v", err)
 	}
 
@@ -234,7 +235,7 @@ func newFakeOIDC(t *testing.T) *fakeOIDC {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
 		if f.discErr {
-			http.Error(w, "x", 500)
+			http.Error(w, "x", http.StatusInternalServerError)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{"issuer": f.srv.URL, "authorization_endpoint": f.srv.URL + "/auth",
@@ -246,7 +247,7 @@ func newFakeOIDC(t *testing.T) *fakeOIDC {
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		if f.tokenErr || r.Form.Get("code_verifier") == "" {
-			http.Error(w, "bad", 400)
+			http.Error(w, "bad", http.StatusBadRequest)
 			return
 		}
 		out := map[string]any{"access_token": "at", "token_type": "Bearer"}
@@ -331,7 +332,7 @@ func TestGoogle(t *testing.T) {
 		t.Error("claims type error not surfaced")
 	}
 
-	if _, err := g.Finish(ctx, "unknown", "code"); err != ErrFlow {
+	if _, err := g.Finish(ctx, "unknown", "code"); !errors.Is(err, ErrFlow) {
 		t.Errorf("unknown: %v", err)
 	}
 

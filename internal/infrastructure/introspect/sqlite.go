@@ -112,6 +112,9 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 			cols = append(cols, c)
 		}
 		r.Close()
+		if err := r.Err(); err != nil {
+			return diagram.Introspected{}, err
+		}
 		var pkCols []string
 		pkRank := map[string]int{}
 		for _, c := range cols {
@@ -147,6 +150,9 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 				fkCount[f.id]++
 			}
 			r.Close()
+			if err := r.Err(); err != nil {
+				return diagram.Introspected{}, err
+			}
 		}
 
 		uniqueSingle := map[string]bool{}
@@ -171,6 +177,9 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 				list = append(list, ix)
 			}
 			r.Close()
+			if err := r.Err(); err != nil {
+				return diagram.Introspected{}, err
+			}
 			for _, ix := range list {
 				ri, err := db.QueryContext(ctx, `pragma index_info(`+quoteIdent(ix.name)+`)`)
 				if err != nil {
@@ -191,6 +200,9 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 					names = append(names, n.String)
 				}
 				ri.Close()
+				if err := ri.Err(); err != nil {
+					return diagram.Introspected{}, err
+				}
 				switch {
 				case expr:
 					warnings = append(warnings, fmt.Sprintf("%s: index %s uses an expression and was skipped", o.name, ix.name))
@@ -274,6 +286,9 @@ func sqliteFirstPK(ctx context.Context, db *sql.DB, table string) string {
 		if pk > 0 && (best == 0 || pk < best) {
 			best, name = pk, n
 		}
+	}
+	if r.Err() != nil {
+		return ""
 	}
 	return name
 }

@@ -298,7 +298,7 @@ func TestMQTTCutoff(t *testing.T) {
 	e := newMQTT(t)
 	bus, kick := &cutBus{}, &cutKicker{}
 	e.acc.Clients, e.acc.Bus, e.acc.Kicker = &MemoryClients{}, bus, kick
-	e.Diagrams.Cutoff = e.acc
+	e.Cutoff = e.acc
 	a, p := e.acc, e.pid
 	link, tok, _ := e.CreateShare(dctx, alice, p, NewShare{Role: diagram.RoleEditor})
 	g := "g.guestguest"
@@ -409,7 +409,7 @@ func TestMQTTCutAnnouncedToOtherInstances(t *testing.T) {
 	e := newMQTT(t)
 	bus := &cutBus{}
 	e.acc.Clients, e.acc.Bus = &MemoryClients{}, bus
-	e.Diagrams.Cutoff = e.acc
+	e.Cutoff = e.acc
 	bobC := e.login(t, bob)
 	other := &MQTTAccess{D: e.Diagrams, Guests: &MemoryGuests{}}
 	if !e.acc.Authorize(dctx, bobC, MQTTTicketUser, "subscribe", "dg/p/"+e.pid+"/events") {
@@ -520,7 +520,7 @@ func TestCutExpiredShares(t *testing.T) {
 	e := newMQTT(t)
 	kick := &cutKicker{}
 	e.acc.Clients, e.acc.Bus, e.acc.Kicker = &MemoryClients{}, &cutBus{}, kick
-	e.Diagrams.Cutoff = e.acc
+	e.Cutoff = e.acc
 	secs := 3600
 	_, soon, _ := e.CreateShare(dctx, alice, e.pid, NewShare{Role: diagram.RoleViewer, ExpiresInSeconds: &secs})
 	_, never, _ := e.CreateShare(dctx, alice, e.pid, NewShare{Role: diagram.RoleViewer})

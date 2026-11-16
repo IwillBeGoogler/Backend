@@ -124,7 +124,7 @@ func Sanitize(in []byte) ([]byte, error) {
 	)
 	for {
 		tok, err := dec.Token()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -345,7 +345,7 @@ func checkUses(root *node) error {
 
 func write(b *bytes.Buffer, n *node, root bool) {
 	if n.name == "" {
-		xml.EscapeText(b, []byte(n.text))
+		_ = xml.EscapeText(b, []byte(n.text))
 		return
 	}
 	b.WriteByte('<')
@@ -357,7 +357,7 @@ func write(b *bytes.Buffer, n *node, root bool) {
 		b.WriteByte(' ')
 		b.WriteString(a.name)
 		b.WriteString(`="`)
-		xml.EscapeText(b, []byte(a.val))
+		_ = xml.EscapeText(b, []byte(a.val))
 		b.WriteByte('"')
 	}
 	if len(n.children) == 0 {

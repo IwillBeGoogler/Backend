@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -38,7 +39,7 @@ func Observe(next http.Handler) http.Handler {
 		r = r.WithContext(context.WithValue(r.Context(), routeKey{}, rh))
 		defer func() {
 			if v := recover(); v != nil {
-				if v == http.ErrAbortHandler {
+				if e, ok := v.(error); ok && errors.Is(e, http.ErrAbortHandler) {
 					panic(v) // net/http's sentinel: abort silently, never log or answer
 				}
 				zap.L().Error("panic", zap.Any("ctx", r.Context()), zap.Any("panic", v), zap.String("path", r.URL.Path))
@@ -46,7 +47,7 @@ func Observe(next http.Handler) http.Handler {
 				span.RecordError(fmt.Errorf("panic: %v", v), trace.WithStackTrace(true))
 				span.SetStatus(codes.Error, "panic")
 				if !rec.wrote {
-					errorx.WriteProblemRequest(rec, r, errorx.New(errorx.ErrInternal, "panic"))
+					_ = errorx.WriteProblemRequest(rec, r, errorx.New(errorx.ErrInternal, "panic"))
 				}
 				rec.status = http.StatusInternalServerError
 			}

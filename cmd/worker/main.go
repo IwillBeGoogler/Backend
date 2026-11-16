@@ -55,9 +55,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer shutdownTelemetry(context.Background())
+	defer func() { _ = shutdownTelemetry(context.Background()) }()
 	logger := telemetry.NewLogger()
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 	zap.ReplaceGlobals(logger)
 	slog.SetDefault(slog.New(zapslog.NewHandler(logger.Core())))
 
@@ -103,7 +103,11 @@ func healthcheck() int {
 		return 1
 	}
 	c := http.Client{Timeout: 2 * time.Second}
-	resp, err := c.Get("http://127.0.0.1:" + port + "/healthz")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://127.0.0.1:"+port+"/healthz", nil)
+	if err != nil {
+		return 1
+	}
+	resp, err := c.Do(req)
 	if err != nil {
 		return 1
 	}

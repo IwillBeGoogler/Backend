@@ -2,12 +2,12 @@ package postgres
 
 import (
 	"context"
-	"encoding/json"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
-	"github.com/jackc/pgx/v5"
 )
 
 // Comments (diagram.CommentRepository).
@@ -79,7 +79,7 @@ func (r *DiagramRepo) InsertComment(ctx context.Context, c diagram.Comment) erro
 	return pgx.BeginFunc(ctx, r.db, func(tx pgx.Tx) error {
 		var anchor any // NULL for a reply
 		if len(c.Anchor) > 0 {
-			anchor = json.RawMessage(c.Anchor)
+			anchor = c.Anchor
 		}
 		_, err := tx.Exec(ctx, `INSERT INTO dg_comments (id, file_id, project_id, parent_id, author_id, body, anchor, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,

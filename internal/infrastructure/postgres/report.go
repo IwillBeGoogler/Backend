@@ -3,10 +3,11 @@ package postgres
 import (
 	"context"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/report"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/report"
 )
 
 type ReportRepo struct{ db *pgxpool.Pool }

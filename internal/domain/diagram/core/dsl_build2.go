@@ -1069,7 +1069,7 @@ func applyUml(page Obj, doc *DslDoc, env *umlEnv) map[string]bool {
 			var msgs []any
 			var lines []string
 			for i, m := range doc.CommMsgs {
-				if taken[m] || !((m.From == l.From && m.To == l.To) || (m.From == l.To && m.To == l.From)) {
+				if taken[m] || (m.From != l.From || m.To != l.To) && (m.From != l.To || m.To != l.From) {
 					continue
 				}
 				taken[m] = true

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -108,17 +109,17 @@ func TestLocalBlobs(t *testing.T) {
 	if b, err := l.Get(ctx, hash); err != nil || string(b) != "blob" {
 		t.Errorf("get: %q %v", b, err)
 	}
-	if _, err := l.Get(ctx, diagram.HashBytes([]byte("other"))); err != errBlobMissing {
+	if _, err := l.Get(ctx, diagram.HashBytes([]byte("other"))); !errors.Is(err, errBlobMissing) {
 		t.Errorf("missing: %v", err)
 	}
-	if _, err := l.Get(ctx, "../../etc/passwd"); err != errBlobMissing {
+	if _, err := l.Get(ctx, "../../etc/passwd"); !errors.Is(err, errBlobMissing) {
 		t.Errorf("invalid hash: %v", err)
 	}
 	s, err := newS3Blobs(s3Config{Endpoint: "localhost:1", Bucket: "b", AccessKey: "a", SecretKey: "s"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Get(ctx, "bad"); err != errBlobMissing {
+	if _, err := s.Get(ctx, "bad"); !errors.Is(err, errBlobMissing) {
 		t.Errorf("s3 invalid hash: %v", err)
 	}
 }

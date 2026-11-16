@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/comment"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/comment"
 )
 
 type CommentRepo struct{ db *pgxpool.Pool }

@@ -25,7 +25,7 @@ func TestWriteErrorStatuses(t *testing.T) {
 		http.StatusTeapot:             500,
 	} {
 		w := httptest.NewRecorder()
-		writeError(w, httptest.NewRequest("GET", "/x", nil), status, "msg")
+		writeError(w, httptest.NewRequest(http.MethodGet, "/x", nil), status, "msg")
 		if w.Code != want {
 			t.Errorf("status %d: got %d, want %d", status, w.Code, want)
 		}
@@ -37,7 +37,7 @@ type failWriter struct{ http.ResponseWriter }
 func (failWriter) Write([]byte) (int, error) { return 0, errors.New("closed") }
 
 func TestProblemWriteFailureIsLogged(t *testing.T) {
-	problem(failWriter{httptest.NewRecorder()}, httptest.NewRequest("GET", "/x", nil), errorx.New(errorx.ErrInternal, "x"))
+	problem(failWriter{httptest.NewRecorder()}, httptest.NewRequest(http.MethodGet, "/x", nil), errorx.New(errorx.ErrInternal, "x"))
 }
 
 func TestMQTTKind(t *testing.T) {
@@ -73,12 +73,12 @@ func TestSmallPureHelpers(t *testing.T) {
 	mux.HandleFunc("GET /v/{version}", func(w http.ResponseWriter, r *http.Request) { got, ok = pathVersion(w, r) })
 	for path, want := range map[string]bool{"/v/3": true, "/v/0": false, "/v/abc": false} {
 		w := httptest.NewRecorder()
-		mux.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		mux.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
 		if ok != want || (want && got != 3) || (!want && w.Code != 400) {
 			t.Errorf("%s: %d %v (%d)", path, got, ok, w.Code)
 		}
 	}
-	if limitParam(httptest.NewRequest("GET", "/x?limit=7", nil), 20) != 7 || limitParam(httptest.NewRequest("GET", "/x?limit=z", nil), 20) != 20 {
+	if limitParam(httptest.NewRequest(http.MethodGet, "/x?limit=7", nil), 20) != 7 || limitParam(httptest.NewRequest(http.MethodGet, "/x?limit=z", nil), 20) != 20 {
 		t.Error("limitParam")
 	}
 	if sddFileName(" a/b:c ", "fb") != "a_b_c.sdd" || sddFileName("   ", "fb") != "fb.sdd" || len(sddFileName(strings.Repeat("a", 150), "fb")) != 104 {

@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bakhod1r/errorx"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
-	"github.com/bakhod1r/errorx"
 )
 
 type rssFeed struct {
@@ -53,8 +54,8 @@ func (h *Handler) postURL(p post.Post) string {
 
 func writeXML(w http.ResponseWriter, ctype string, v any) {
 	w.Header().Set("Content-Type", ctype)
-	w.Write([]byte(xml.Header))
-	xml.NewEncoder(w).Encode(v)
+	_, _ = w.Write([]byte(xml.Header))
+	_ = xml.NewEncoder(w).Encode(v)
 }
 
 // rss is the RSS 2.0 feed of the latest 20 published posts.

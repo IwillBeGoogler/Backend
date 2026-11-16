@@ -196,7 +196,7 @@ func begin(t *testing.T, e *env, provider string) string {
 	res, err := noFollow.Get(e.srv.URL + "/api/auth/oauth/" + provider + "/login")
 	must(t, err)
 	res.Body.Close()
-	if res.StatusCode != 302 {
+	if res.StatusCode != http.StatusFound {
 		t.Fatalf("login = %d", res.StatusCode)
 	}
 	return res.Header.Get("Location")
@@ -229,7 +229,7 @@ func callback(t *testing.T, e *env, provider, cb string) url.Values {
 	res.Body.Close()
 	loc, err := url.Parse(res.Header.Get("Location"))
 	must(t, err)
-	if res.StatusCode != 302 || loc.Scheme+"://"+loc.Host+loc.Path != "http://site.test/auth/callback" || loc.RawQuery != "" {
+	if res.StatusCode != http.StatusFound || loc.Scheme+"://"+loc.Host+loc.Path != "http://site.test/auth/callback" || loc.RawQuery != "" {
 		t.Fatalf("callback = %d %s", res.StatusCode, loc)
 	}
 	frag, err := url.ParseQuery(loc.Fragment)

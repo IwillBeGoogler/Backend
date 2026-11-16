@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/migrations"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,6 +17,9 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/migrations"
 )
 
 // Options tune the pool. Zero values fall back to env (PG_*) and then to
@@ -44,7 +45,7 @@ func Connect(ctx context.Context, url string, opts Options) (*pgxpool.Pool, erro
 		return nil, err
 	}
 	applyPoolConfig(cfg, opts)
-	cfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
 	db, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, err

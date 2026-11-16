@@ -29,7 +29,7 @@ func TestSendHeadersAndSignature(t *testing.T) {
 		got = r.Header.Clone()
 		b, _ := io.ReadAll(r.Body)
 		body = string(b)
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer srv.Close()
 	r := req(srv.URL)

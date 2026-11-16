@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 )
 
 type shutdownKey struct{}

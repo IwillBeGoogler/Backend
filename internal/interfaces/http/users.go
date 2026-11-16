@@ -3,8 +3,9 @@ package http
 import (
 	"net/http"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"time"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
@@ -221,6 +222,24 @@ func (h *Handler) updateMe(w http.ResponseWriter, r *http.Request) {
 	var in user.ProfileUpdate
 	if ok && decode(w, r, &in) {
 		u, err := h.Accounts.UpdateProfile(r.Context(), actor, in)
+		respond(w, r, http.StatusOK, u, err, "")
+	}
+}
+
+type usernameInput struct {
+	Username string `json:"username"`
+}
+
+// changeUsername renames the caller; 409 when the username is taken.
+//
+// Auth: user.
+//
+// spector:tags me
+func (h *Handler) changeUsername(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.requireUser(w, r)
+	var in usernameInput
+	if ok && h.allow(w, r, "change-username", 5, time.Hour) && decode(w, r, &in) {
+		u, err := h.Accounts.ChangeUsername(r.Context(), actor, in.Username)
 		respond(w, r, http.StatusOK, u, err, "")
 	}
 }

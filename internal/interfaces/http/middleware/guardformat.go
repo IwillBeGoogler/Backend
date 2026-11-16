@@ -77,8 +77,8 @@ func translateGuard(w http.ResponseWriter, r *http.Request, status int, body []b
 		var e struct {
 			Error struct{ Code, Message string } `json:"error"`
 		}
-		json.Unmarshal(body, &e)
-		errorx.WriteProblemRequest(w, r, guardProblem(status, e.Error.Code, e.Error.Message))
+		_ = json.Unmarshal(body, &e)
+		_ = errorx.WriteProblemRequest(w, r, guardProblem(status, e.Error.Code, e.Error.Message))
 		return
 	}
 	var obj map[string]json.RawMessage
@@ -130,7 +130,7 @@ func guardProblem(status int, code, msg string) *errorx.AppError {
 	e := errorx.New(c, "guard: "+code).WithDetails(msg)
 	e.HTTPStatus = status // keep Guard's status (e.g. 413, 423)
 	if code != "" && code != "internal" {
-		e.WithExtension("reason", code)
+		_ = e.WithExtension("reason", code)
 	}
 	return e
 }

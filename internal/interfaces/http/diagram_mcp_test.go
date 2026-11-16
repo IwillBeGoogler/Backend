@@ -62,7 +62,7 @@ func (e tokenEnv) rpc(t *testing.T, auth []string, method string, params any) rp
 	t.Helper()
 	rpcID++
 	body, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": rpcID, "method": method, "params": params})
-	req, _ := http.NewRequest("POST", e.srv.URL+DiagramMCPPath, bytes.NewReader(body))
+	req, _ := http.NewRequest(http.MethodPost, e.srv.URL+DiagramMCPPath, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	for i := 0; i+1 < len(auth); i += 2 {
@@ -117,7 +117,7 @@ func TestMCPAuthAndTransport(t *testing.T) {
 			t.Fatal(err)
 		}
 		res.Body.Close()
-		if res.StatusCode != 405 || res.Header.Get("Allow") != "POST" {
+		if res.StatusCode != http.StatusMethodNotAllowed || res.Header.Get("Allow") != "POST" {
 			t.Errorf("%s: %d Allow %q", m, res.StatusCode, res.Header.Get("Allow"))
 		}
 	}
@@ -485,11 +485,11 @@ func TestMCPRateLimitAndAudit(t *testing.T) {
 	if r := env.bearer(t, tok)("GET", "/v1/mcp/audit", nil); r.Code != 404 && r.Code != 403 {
 		t.Errorf("audit through a token: %d", r.Code)
 	}
-	req, _ := http.NewRequest("GET", env.srv.URL+DiagramMCPPath+"/audit", nil)
+	req, _ := http.NewRequest(http.MethodGet, env.srv.URL+DiagramMCPPath+"/audit", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	res, _ := http.DefaultClient.Do(req)
 	res.Body.Close()
-	if res.StatusCode != 403 {
+	if res.StatusCode != http.StatusForbidden {
 		t.Errorf("the audit through a token: %d", res.StatusCode)
 	}
 	if r := env.session(t, 0).do("GET", "/mcp/audit", nil); r.Code != 401 {
@@ -559,14 +559,14 @@ func TestMCPRateLimitOverHTTP(t *testing.T) {
 
 func TestMCPIsOffWhenDisabled(t *testing.T) {
 	srv, _ := newDiagramServer(t) // MCPEnabled is false
-	req, _ := http.NewRequest("POST", srv.URL+DiagramMCPPath, strings.NewReader("{}"))
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+DiagramMCPPath, strings.NewReader("{}"))
 	req.Header.Set("X-Test-User", "1")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res.Body.Close()
-	if res.StatusCode != 404 && res.StatusCode != 405 {
+	if res.StatusCode != http.StatusNotFound && res.StatusCode != http.StatusMethodNotAllowed {
 		t.Errorf("disabled MCP answers %d", res.StatusCode)
 	}
 }

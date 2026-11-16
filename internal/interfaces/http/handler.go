@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/interfaces/diagramhub"
-	"go.uber.org/zap"
 )
 
 // Limiter allows n requests per window for key.
@@ -169,6 +170,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/me", h.me)
 	mux.HandleFunc("PATCH /api/me", h.updateMe)
+	mux.HandleFunc("PUT /api/me/username", h.changeUsername)
 	mux.HandleFunc("DELETE /api/me", h.deleteMe)
 	mux.HandleFunc("PUT /api/me/password", h.changePassword)
 	mux.HandleFunc("GET /api/me/posts", h.myPosts)

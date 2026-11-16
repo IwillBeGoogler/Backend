@@ -434,7 +434,7 @@ func TestDiagramRoutesAreOffWithoutService(t *testing.T) {
 	mux := http.NewServeMux()
 	NewHandler(Deps{}).Routes(mux)
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequest("GET", DiagramPrefix+"/projects", nil))
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, DiagramPrefix+"/projects", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want 404", rec.Code)
 	}

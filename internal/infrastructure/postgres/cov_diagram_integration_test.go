@@ -11,12 +11,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 	"net"
 	"net/url"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -38,7 +39,7 @@ type covDiaConn struct {
 func (c covDiaConn) Write(b []byte) (int, error) {
 	if c.f.left.Add(-1) < 0 {
 		c.f.hit.Store(true)
-		_ = c.Conn.Close()
+		_ = c.Close()
 		return 0, errors.New("covDia: injected write failure")
 	}
 	return c.Conn.Write(b)
@@ -101,7 +102,7 @@ func covDiaChk(err error, ok bool, msg string) error {
 // covDiaIs wants err to be target.
 func covDiaIs(err, target error) error {
 	if err == nil {
-		return fmt.Errorf("want %v, got nil", target)
+		return fmt.Errorf("want %w, got nil", target)
 	}
 	if errors.Is(err, target) {
 		return nil

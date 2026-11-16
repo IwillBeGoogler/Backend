@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +28,7 @@ func TestObserveLabelsInnerRoute(t *testing.T) {
 func TestObserveRepanicsAbortHandler(t *testing.T) {
 	h := Observe(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic(http.ErrAbortHandler) }))
 	defer func() {
-		if v := recover(); v != http.ErrAbortHandler {
+		if v := recover(); !isAbort(v) {
 			t.Fatalf("recovered %v, want http.ErrAbortHandler", v)
 		}
 	}()
@@ -63,4 +64,9 @@ func counter(t *testing.T, c interface{ Write(*dto.Metric) error }) float64 {
 		t.Fatal(err)
 	}
 	return m.GetCounter().GetValue()
+}
+
+func isAbort(v any) bool {
+	e, ok := v.(error)
+	return ok && errors.Is(e, http.ErrAbortHandler)
 }

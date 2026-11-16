@@ -2,6 +2,7 @@ package sddfile
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -167,7 +168,8 @@ func ReadProject(b []byte, lim Limits) (Project, []string, error) {
 		}
 		r, err := ReadFile(u.files[f.Path], Limits{MaxFileBytes: lim.MaxFileBytes, MaxUncompressedBytes: budget, MaxEntries: lim.MaxEntries})
 		if err != nil {
-			if e, ok := err.(*Error); ok {
+			e := &Error{}
+			if errors.As(err, &e) {
 				return Project{}, nil, &Error{Code: e.Code, Entry: f.Path, Msg: f.Path + ": " + e.Msg}
 			}
 			return Project{}, nil, err

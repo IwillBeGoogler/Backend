@@ -30,6 +30,7 @@ func TestNormalizeRejects(t *testing.T) {
 		"no definition": func(i *Input) { i.Definition = "" },
 		"long def":      func(i *Input) { i.Definition = strings.Repeat("a", maxDefinition+1) },
 		"bad lang":      func(i *Input) { i.Lang = "toolonglang" },
+		"long alias":    func(i *Input) { i.Aliases = []string{strings.Repeat("a", maxTerm+1)} },
 		"many aliases": func(i *Input) {
 			for n := 0; n <= maxAliases; n++ {
 				i.Aliases = append(i.Aliases, strings.Repeat("a", n+1))
@@ -84,5 +85,9 @@ func TestEntryDecodeDoesNotInherit(t *testing.T) {
 	}
 	if got := d.G[0]; got.Term != "x" || got.Definition != "" || len(got.Aliases) != 0 {
 		t.Errorf("entry inherited old fields: %+v", got)
+	}
+	var bad Entry
+	if err := json.Unmarshal([]byte(`{"term":123}`), &bad); err == nil {
+		t.Fatal("accepted invalid entry json")
 	}
 }

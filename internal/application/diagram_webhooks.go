@@ -63,7 +63,7 @@ type WebhookDispatcher struct {
 
 func NewWebhookDispatcher(repo diagram.WebhookRepository, q WebhookQueue, s WebhookSender, check func(context.Context, string) error) *WebhookDispatcher {
 	return &WebhookDispatcher{Repo: repo, Queue: q, Sender: s, Check: check, now: time.Now,
-		jitter: func() float64 { return rand.Float64()*2 - 1 }}
+		jitter: func() float64 { return rand.Float64()*2 - 1 }} //nolint:gosec // retry jitter, not security
 }
 
 func (w *WebhookDispatcher) checkURL(ctx context.Context, url string) error {

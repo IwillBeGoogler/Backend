@@ -24,7 +24,7 @@ func (f *fakeVault) handler() http.Handler {
 			var b map[string]string
 			_ = json.NewDecoder(r.Body).Decode(&b)
 			if b["role_id"] != "role" || b["secret_id"] != "sid" {
-				w.WriteHeader(400)
+				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"errors":["invalid"]}`))
 				return
 			}
@@ -32,12 +32,12 @@ func (f *fakeVault) handler() http.Handler {
 			_, _ = w.Write([]byte(`{"auth":{"client_token":"tok"}}`))
 		case "/v1/kv/data/app/prod":
 			if r.Header.Get("X-Vault-Token") != "tok" {
-				w.WriteHeader(403)
+				w.WriteHeader(http.StatusForbidden)
 				return
 			}
 			f.reads.Add(1)
 			if f.failRead {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				_, _ = w.Write([]byte(`{"errors":["boom"]}`))
 				return
 			}
@@ -46,9 +46,9 @@ func (f *fakeVault) handler() http.Handler {
 			if r.Header.Get("X-Vault-Token") == "tok" {
 				f.revokes.Add(1)
 			}
-			w.WriteHeader(204)
+			w.WriteHeader(http.StatusNoContent)
 		default:
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 		}
 	})
 }

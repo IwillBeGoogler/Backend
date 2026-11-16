@@ -277,7 +277,7 @@ func comment(b *strings.Builder, target, text string) {
 func quoteIdent(s string) string {
 	plain := s != ""
 	for i, r := range s {
-		if !(r == '_' || r >= 'a' && r <= 'z' || i > 0 && r >= '0' && r <= '9') {
+		if r != '_' && (r < 'a' || r > 'z') && (i <= 0 || r < '0' || r > '9') {
 			plain = false
 			break
 		}

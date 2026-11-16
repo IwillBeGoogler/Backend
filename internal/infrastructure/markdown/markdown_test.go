@@ -208,4 +208,10 @@ func TestCodeTabs(t *testing.T) {
 	if strings.Contains(bad, "<script") || strings.Contains(bad, "code-tabs") {
 		t.Errorf("bad group: %q", bad)
 	}
+
+	var ct codeTabs
+	if ct.Kind() != kindCodeTabs {
+		t.Fatal("wrong kind")
+	}
+	ct.Dump([]byte("src"), 0)
 }

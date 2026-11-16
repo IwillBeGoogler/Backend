@@ -82,7 +82,7 @@ func TestUnread(t *testing.T) {
 }
 
 func TestCommenterRole(t *testing.T) {
-	if !(RoleViewer.Rank() < RoleCommenter.Rank() && RoleCommenter.Rank() < RoleEditor.Rank() && RoleEditor.Rank() < RoleOwner.Rank()) {
+	if RoleViewer.Rank() >= RoleCommenter.Rank() || RoleCommenter.Rank() >= RoleEditor.Rank() || RoleEditor.Rank() >= RoleOwner.Rank() {
 		t.Fatal("ranks must run viewer < commenter < editor < owner")
 	}
 	if !RoleCommenter.Allows(RoleViewer) || !RoleCommenter.Allows(RoleCommenter) || RoleCommenter.Allows(RoleEditor) || RoleViewer.Allows(RoleCommenter) {

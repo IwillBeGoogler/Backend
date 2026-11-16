@@ -422,7 +422,7 @@ func ParseDSL(text string) ParseResult {
 		if len(stack) > 0 {
 			top = stack[len(stack)-1]
 		}
-		if strings.HasPrefix(trimmed, "#") && !(top != nil && top.kind == "uml" && top.uml.inClassBody()) {
+		if strings.HasPrefix(trimmed, "#") && (top == nil || top.kind != "uml" || !top.uml.inClassBody()) {
 			continue
 		}
 		src := stripComment(raw)
@@ -655,7 +655,6 @@ func ParseDSL(text string) ParseResult {
 			}
 			if i < len(toks) && toks[i].k == "str" {
 				title = toks[i].v
-				i++
 			}
 			if title == "" {
 				title = id
@@ -694,7 +693,6 @@ func ParseDSL(text string) ParseResult {
 			}
 			if i < len(toks) && toks[i].k == "str" {
 				title = toks[i].v
-				i++
 			}
 			if title == "" {
 				title = id
@@ -956,7 +954,7 @@ func parseSeqLine(c *ctx, s string, ln int, diag func(l, c int, m, sev string), 
 	if m != nil && sectionOps[strings.ToLower(m[1])] != "" && len(c.stack) > 0 {
 		f := c.stack[len(c.stack)-1]
 		w := strings.ToLower(m[1])
-		if f.op != sectionOps[w] && !(w == "else" && (f.op == "alt" || f.op == "opt" || f.op == "loop" || f.op == "break")) {
+		if f.op != sectionOps[w] && (w != "else" || (f.op != "alt" && f.op != "opt" && f.op != "loop" && f.op != "break")) {
 			diag(ln, 1, `"`+m[1]+`" does not belong in `+f.op, "warning")
 		}
 		f.sections = append(f.sections, &DslSeqSection{Guard: strings.TrimSpace(m[2])})

@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 )
 
 type AnalyticsRepo struct{ db *pgxpool.Pool }

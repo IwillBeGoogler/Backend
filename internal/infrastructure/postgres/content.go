@@ -3,12 +3,13 @@ package postgres
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/revision"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/series"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // RevisionRepo implements revision.Repository.

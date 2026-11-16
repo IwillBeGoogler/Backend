@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/bakhod1r/emailx"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 )
 
 // DeletionGrace is how long a deleted account can be restored by logging in
@@ -107,6 +108,15 @@ func (u ProfileUpdate) Normalize() (ProfileUpdate, error) {
 
 var usernameRe = regexp.MustCompile(`^[a-zA-Z0-9_]{3,32}$`)
 
+// ValidateUsername trims and checks a username: 3-32 chars, letters, digits, _.
+func ValidateUsername(username string) (string, error) {
+	username = strings.TrimSpace(username)
+	if !usernameRe.MatchString(username) {
+		return "", domain.Invalid("username: 3-32 chars, letters, digits, _")
+	}
+	return username, nil
+}
+
 // Registration is validated sign-up input.
 type Registration struct {
 	Username string
@@ -116,9 +126,9 @@ type Registration struct {
 
 // NewRegistration validates sign-up input.
 func NewRegistration(username, email, password string) (Registration, error) {
-	username = strings.TrimSpace(username)
-	if !usernameRe.MatchString(username) {
-		return Registration{}, domain.Invalid("username: 3-32 chars, letters, digits, _")
+	username, err := ValidateUsername(username)
+	if err != nil {
+		return Registration{}, err
 	}
 	addr, err := ValidateEmail(email)
 	if err != nil {
@@ -170,6 +180,8 @@ type Repository interface {
 	// Profile fills Profile.IsFollowing for viewerID (0 = anonymous).
 	Profile(ctx context.Context, username string, viewerID int) (Profile, error)
 	UpdateProfile(ctx context.Context, id int, u ProfileUpdate) (User, error)
+	// SetUsername renames a user; ErrConflict when the name (case-insensitively) is taken.
+	SetUsername(ctx context.Context, id int, username string) (User, error)
 
 	// Follow reports whether the follow is new. Follow and Unfollow are idempotent.
 	Follow(ctx context.Context, followerID, followeeID int) (bool, error)

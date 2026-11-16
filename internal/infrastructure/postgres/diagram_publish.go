@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram"
-	"github.com/jackc/pgx/v5"
 )
 
 // Blog pages of diagram files (diagram.PublishRepository). The page lives

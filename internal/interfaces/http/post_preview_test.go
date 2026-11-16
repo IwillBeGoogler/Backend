@@ -38,7 +38,7 @@ func previewServer(t *testing.T, limit Limiter) *httptest.Server {
 
 func previewReq(t *testing.T, srv *httptest.Server, user bool, body string) (int, string) {
 	t.Helper()
-	req, _ := http.NewRequest("POST", srv.URL+"/api/posts/preview", strings.NewReader(body))
+	req, _ := http.NewRequest(http.MethodPost, srv.URL+"/api/posts/preview", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	if user {
 		req.Header.Set("X-Test-User", "1")

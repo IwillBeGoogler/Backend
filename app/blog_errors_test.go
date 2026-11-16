@@ -21,7 +21,7 @@ func uploadRaw(c *client, field string, data []byte) int {
 		fw.Write(data)
 	}
 	mw.Close()
-	req, _ := http.NewRequest("POST", c.base+"/api/uploads", &buf)
+	req, _ := http.NewRequest(http.MethodPost, c.base+"/api/uploads", &buf)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)

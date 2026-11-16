@@ -29,11 +29,11 @@ func TestReplayedProjectRebuildsMissingFile(t *testing.T) {
 }
 
 func TestIDTakenMapsConflict(t *testing.T) {
-	if idTaken(domain.ErrConflict) != diagram.ErrIDTaken {
+	if !errors.Is(idTaken(domain.ErrConflict), diagram.ErrIDTaken) {
 		t.Error("conflict")
 	}
 	other := errors.New("x")
-	if idTaken(other) != other {
+	if !errors.Is(idTaken(other), other) {
 		t.Error("passthrough")
 	}
 }

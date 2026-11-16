@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"context"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
@@ -86,6 +87,9 @@ func (m *memUsers) Profile(_ context.Context, n string, _ int) (user.Profile, er
 }
 func (m *memUsers) UpdateProfile(_ context.Context, id int, p user.ProfileUpdate) (user.User, error) {
 	return user.User{ID: id, DisplayName: p.DisplayName}, nil
+}
+func (m *memUsers) SetUsername(_ context.Context, id int, n string) (user.User, error) {
+	return user.User{ID: id, Username: n}, m.err
 }
 func (m *memUsers) Follow(context.Context, int, int) (bool, error) { return m.followed, m.err }
 func (m *memUsers) Unfollow(context.Context, int, int) error       { return m.err }
@@ -383,6 +387,12 @@ func TestAccountsProfilesAndFollows(t *testing.T) {
 	if u, err := a.UpdateProfile(ctx, user.User{ID: 1, Roles: []string{"r"}}, user.ProfileUpdate{DisplayName: "A"}); err != nil || len(u.Roles) != 1 {
 		t.Error(u, err)
 	}
+	if _, err := a.ChangeUsername(ctx, user.User{ID: 1}, "a b"); err == nil {
+		t.Error("bad username accepted")
+	}
+	if u, err := a.ChangeUsername(ctx, user.User{ID: 1, Roles: []string{"r"}}, " new_name "); err != nil || u.Username != "new_name" || len(u.Roles) != 1 {
+		t.Error(u, err)
+	}
 	w2 := newWorld(1)
 	w2.posts.posts[1] = post.Post{}
 	if _, err := a.UserPosts(ctx, "gone", domain.Paging{}); !errors.Is(err, domain.ErrNotFound) {
@@ -434,7 +444,7 @@ func TestAccountsProfilesAndFollows(t *testing.T) {
 	if err := noPerm.Follow(ctx, ali, "vali"); !errors.Is(err, domain.ErrForbidden) {
 		t.Error(err)
 	}
-	if got := notFoundOr(errBoom); got != errBoom {
+	if got := notFoundOr(errBoom); !errors.Is(got, errBoom) {
 		t.Error(got)
 	}
 }

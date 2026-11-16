@@ -386,6 +386,19 @@ func (a *Accounts) UpdateProfile(ctx context.Context, actor user.User, u user.Pr
 	return out, err
 }
 
+// ChangeUsername renames the caller. The new name must be free (case-insensitive).
+func (a *Accounts) ChangeUsername(ctx context.Context, actor user.User, username string) (user.User, error) {
+	ctx, span := tracer.Start(ctx, "Accounts.ChangeUsername")
+	defer span.End()
+	username, err := user.ValidateUsername(username)
+	if err != nil {
+		return user.User{}, err
+	}
+	out, err := a.users.SetUsername(ctx, actor.ID, username)
+	out.Roles = actor.Roles
+	return out, err
+}
+
 func (a *Accounts) UserPosts(ctx context.Context, username string, p domain.Paging) (post.Page, error) {
 	ctx, span := tracer.Start(ctx, "Accounts.UserPosts")
 	defer span.End()
@@ -414,7 +427,7 @@ func (a *Accounts) Follow(ctx context.Context, actor user.User, username string)
 	}
 	created, err := a.users.Follow(ctx, actor.ID, target.ID)
 	if err == nil && created {
-		a.blog.notify(ctx, social.Notification{Type: social.NotifyFollow, ActorID: actor.ID}, target.ID)
+		_ = a.blog.notify(ctx, social.Notification{Type: social.NotifyFollow, ActorID: actor.ID}, target.ID)
 	}
 	return err
 }

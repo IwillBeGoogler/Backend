@@ -40,7 +40,7 @@ func (s *Service) mysql(ctx context.Context, t diagram.DBTarget) (diagram.Intros
 	cfg.Timeout, cfg.ReadTimeout = ConnectTimeout, StatementTimeout
 	cfg.AllowAllFiles, cfg.MultiStatements, cfg.AllowCleartextPasswords = false, false, false
 	if t.SSL {
-		cfg.TLS = &tls.Config{InsecureSkipVerify: true, ServerName: t.Host} // encrypted, not verified, like the Node server
+		cfg.TLS = &tls.Config{InsecureSkipVerify: true, ServerName: t.Host} //nolint:gosec // encrypted, not verified, like the Node server
 	}
 	d := s.dialer()
 	cfg.DialFunc = d.DialContext // resolves, checks every answer, dials the checked address

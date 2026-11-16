@@ -269,9 +269,10 @@ func printTables(page Obj, out *[]string) {
 	for _, t := range tables {
 		d := dataOf(t)
 		kind := "table"
-		if d["tableKind"] == "enum" {
+		switch d["tableKind"] {
+		case "enum":
 			kind = "enum"
-		} else if d["tableKind"] == "view" {
+		case "view":
 			kind = "view"
 		}
 		*out = append(*out, "", kind+" "+word(jsStr(d["label"]))+" {")
@@ -377,9 +378,10 @@ func printSeq(n Obj, out *[]string) {
 				*out = append(*out, line)
 			case "note":
 				side := "over"
-				if it["side"] == "left" {
+				switch it["side"] {
+				case "left":
 					side = "left of"
-				} else if it["side"] == "right" {
+				case "right":
 					side = "right of"
 				}
 				var over []string

@@ -332,7 +332,7 @@ func TestDiagramEventsWire(t *testing.T) {
 	topics := []string{got[1].Topic, got[2].Topic}
 	var file map[string]any
 	_ = json.Unmarshal(got[1].Payload, &file)
-	if !(topics[0] == "dg/f/f/events" && topics[1] == "dg/p/p/events") || file["type"] != "file.updated" || file["version"] != float64(3) ||
+	if (topics[0] != "dg/f/f/events" || topics[1] != "dg/p/p/events") || file["type"] != "file.updated" || file["version"] != float64(3) ||
 		file["restored"] != true || file["by"].(map[string]any)["share"] != true || file["kind"] != "sdd" {
 		t.Errorf("file event = %v %+v", topics, file)
 	}

@@ -50,5 +50,5 @@ func (s RTCSlots) Release(ctx context.Context, fileID, clientID string) error {
 
 // Members lists the clients in a file's room whose place has not lapsed.
 func (s RTCSlots) Members(ctx context.Context, fileID string) ([]string, error) {
-	return s.RDB.ZRangeByScore(ctx, rtcKey(fileID), &redis.ZRangeBy{Min: strconv.FormatInt(time.Now().UnixMilli(), 10), Max: "+inf"}).Result()
+	return s.RDB.ZRangeArgs(ctx, redis.ZRangeArgs{Key: rtcKey(fileID), ByScore: true, Start: strconv.FormatInt(time.Now().UnixMilli(), 10), Stop: "+inf"}).Result()
 }

@@ -83,13 +83,12 @@ type Hub struct {
 	jobs   []chan job
 	out    chan application.Message
 
-	mu      sync.Mutex
-	bus     application.Bus
-	rooms   map[string]*yroom
-	roster  map[string]rosterMark // file|client -> last published
-	seen    map[string]time.Time  // client -> last awareness (throttle)
-	closed  bool
-	started bool
+	mu     sync.Mutex
+	bus    application.Bus
+	rooms  map[string]*yroom
+	roster map[string]rosterMark // file|client -> last published
+	seen   map[string]time.Time  // client -> last awareness (throttle)
+	closed bool
 }
 
 type job struct {

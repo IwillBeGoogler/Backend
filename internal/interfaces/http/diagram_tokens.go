@@ -8,6 +8,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -76,7 +77,7 @@ func TokenAuth(d *application.Diagrams, active func(ctx context.Context, userID 
 				err = domain.ErrUnauthorized
 			}
 			if err != nil {
-				if err == domain.ErrUnauthorized {
+				if errors.Is(err, domain.ErrUnauthorized) {
 					dgFail(w, r, http.StatusUnauthorized, "INVALID_TOKEN", "The access token is invalid, expired or revoked", nil)
 				} else {
 					dgError(w, r, err)

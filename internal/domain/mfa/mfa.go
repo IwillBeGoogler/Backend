@@ -6,7 +6,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // RFC 6238 TOTP default HMAC-SHA1, required for authenticator-app compatibility
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base32"

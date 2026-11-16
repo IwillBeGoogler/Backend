@@ -163,7 +163,7 @@ func (s *covPG) serve(c net.Conn, sslRefuse bool) {
 		if sslRefuse {
 			return
 		}
-		if b, err = readStartup(); err != nil {
+		if _, err = readStartup(); err != nil {
 			return
 		}
 	}

@@ -18,7 +18,6 @@ type memPubs struct {
 	absent  bool
 	err     error
 	roleErr error
-	members int
 }
 
 func (r *memPubs) Create(_ context.Context, in publication.PublicationInput, owner int) (publication.Publication, error) {

@@ -4,13 +4,14 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/mfa"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/relation"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/sanction"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // MFARepo implements mfa.Repository.

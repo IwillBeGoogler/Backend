@@ -13,14 +13,12 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"go.uber.org/zap"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/captcha"
-	"go.uber.org/zap"
 )
-
-// errCaptcha is a failed or missing CAPTCHA on signup.
-var errCaptcha = errors.New("captcha")
 
 // humanCheck refuses signups from bots: the honeypot must stay empty and,
 // when CAPTCHA is on, the Turnstile token must verify. If Cloudflare is
@@ -232,7 +230,7 @@ func (h *Handler) prerender(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=300")
 	w.Header().Set("X-Robots-Tag", "all")
 	w.WriteHeader(status)
-	w.Write(buf.Bytes())
+	_, _ = w.Write(buf.Bytes())
 }
 
 func (h *Handler) siteName() string {
@@ -334,7 +332,7 @@ func (h *Handler) postPage(ctx context.Context, slug string) (pageMeta, error) {
 	m := pageMeta{
 		Title: p.Title, Description: desc, URL: url, Image: h.absURL(p.CoverURL), Type: "article",
 		Author: p.Author, Published: pub.UTC().Format(time.RFC3339), Modified: p.UpdatedAt.UTC().Format(time.RFC3339),
-		Tags: p.Tags, Body: template.HTML(post.LiveToLink(p.BodyHTML, url)), // sanitized by the markdown renderer; live blocks become a link
+		Tags: p.Tags, Body: template.HTML(post.LiveToLink(p.BodyHTML, url)), //nolint:gosec // sanitized by the markdown renderer; live blocks become a link
 	}
 	ld := map[string]any{
 		"@context": "https://schema.org", "@type": "Article",
@@ -348,7 +346,7 @@ func (h *Handler) postPage(ctx context.Context, slug string) (pageMeta, error) {
 		ld["image"] = m.Image
 	}
 	if b, err := json.Marshal(ld); err == nil {
-		m.JSONLD = template.JS(b) // json.Marshal escapes <, > and & so it can't close the script
+		m.JSONLD = template.JS(b) //nolint:gosec // json.Marshal escapes <, > and & so it can't close the script
 	}
 	return m, nil
 }

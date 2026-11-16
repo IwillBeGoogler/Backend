@@ -6,11 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/glossary"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/post"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PostRepo struct{ db *pgxpool.Pool }

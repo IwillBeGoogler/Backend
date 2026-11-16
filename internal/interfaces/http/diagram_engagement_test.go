@@ -64,9 +64,7 @@ func TestDiagramClapsAndBookmarksWire(t *testing.T) {
 
 	// one notification, to the author, on the first clap only
 	var got []social.Notification
-	for _, n := range notices.All() {
-		got = append(got, n)
-	}
+	got = append(got, notices.All()...)
 	if len(got) != 1 || got[0].Type != social.NotifyDiagramClap || got[0].UserID != 1 || got[0].ActorID != 2 || got[0].DiagramFileID != fid {
 		t.Errorf("notifications = %+v", got)
 	}

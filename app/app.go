@@ -255,7 +255,7 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 	// user status (ban), audit log.
 	httpguard.Mount(api, g, gopts)
 
-	var h http.Handler = withoutGuardLogin(middleware.SpanRoute(api))
+	var h = withoutGuardLogin(middleware.SpanRoute(api))
 	h = middleware.Cache(rdb, h)
 	h = guardauth.WithPrincipal(h)
 	h = guardauth.AccessGate(g, ip, loc)(h)
@@ -270,7 +270,7 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 		return err == nil
 	}
 	h = httpapi.TokenAuth(s.Diagrams, tokenUserActive)(h) // personal access tokens on /api/diagrams/v1 and MCP
-	h = middleware.GuardFormat(h)                                 // Guard's responses in the API's format
+	h = middleware.GuardFormat(h)                         // Guard's responses in the API's format
 	h = middleware.CORS(cfg.AllowedOrigins())(h)
 
 	root := http.NewServeMux()
@@ -313,7 +313,7 @@ func withoutGuardLogin(next http.Handler) http.Handler {
 		// or recording the blog's audit event; clients use PUT /api/me/password.
 		if r.URL.Path == "/api/guard/auth/login" || r.URL.Path == "/api/guard/auth/register" ||
 			r.URL.Path == "/api/guard/auth/password" {
-			errorx.WriteProblemRequest(w, r, errorx.New(errorx.ErrNotFound, "hidden").WithDetails("not found"))
+			_ = errorx.WriteProblemRequest(w, r, errorx.New(errorx.ErrNotFound, "hidden").WithDetails("not found"))
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -376,7 +376,7 @@ func mountDocs(mux *http.ServeMux, cfg config.Config) {
 		if r.URL.RawQuery != "" {
 			target += "?" + r.URL.RawQuery // keep ?key= on the first visit
 		}
-		http.Redirect(w, r, target, http.StatusMovedPermanently)
+		http.Redirect(w, r, target, http.StatusMovedPermanently) //nolint:gosec // target is base-prefixed, same-origin path
 	})
 	mux.Handle(base+"/", http.StripPrefix(base, docs))
 }

@@ -18,7 +18,7 @@ func TestRequireBearer(t *testing.T) {
 		{"0123456789abcdef0123456789abcdef", http.StatusNotFound},
 		{"Bearer 0123456789abcdef0123456789abcdef", http.StatusOK},
 	} {
-		r := httptest.NewRequest("GET", "/metrics", nil)
+		r := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		if tc.auth != "" {
 			r.Header.Set("Authorization", tc.auth)
 		}
@@ -40,7 +40,7 @@ func TestWithoutGuardLoginHidesPasswordChange(t *testing.T) {
 		"/api/guard/auth/logout":   http.StatusOK,
 	} {
 		w := httptest.NewRecorder()
-		h.ServeHTTP(w, httptest.NewRequest("PUT", path, nil))
+		h.ServeHTTP(w, httptest.NewRequest(http.MethodPut, path, nil))
 		if w.Code != want {
 			t.Errorf("%s: status %d, want %d", path, w.Code, want)
 		}

@@ -20,13 +20,13 @@ func (c *client) sse(path string) <-chan string {
 	c.t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	c.t.Cleanup(cancel)
-	req, _ := http.NewRequestWithContext(ctx, "GET", c.base+path, nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 	res, err := http.DefaultClient.Do(req)
 	must(c.t, err)
-	if res.StatusCode != 200 || !strings.HasPrefix(res.Header.Get("Content-Type"), "text/event-stream") {
+	if res.StatusCode != http.StatusOK || !strings.HasPrefix(res.Header.Get("Content-Type"), "text/event-stream") {
 		res.Body.Close()
 		c.t.Fatalf("GET %s = %d %s", path, res.StatusCode, res.Header.Get("Content-Type"))
 	}

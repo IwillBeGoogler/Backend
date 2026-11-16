@@ -204,7 +204,7 @@ func TestCacheWriteInvalidates(t *testing.T) {
 		SkipInvalidate(r.Context())
 	}))
 	do(skip, "POST", "/api/posts/1/view", nil)
-	fail := Cache(rdb, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(500) }))
+	fail := Cache(rdb, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) }))
 	do(fail, "PATCH", "/api/posts/1", nil)
 	if v, _ := f.get(cacheVerKey); v != "1" {
 		t.Fatalf("ver %q after skip/fail", v)
@@ -230,7 +230,7 @@ func TestSessionOnlyAndKeyURI(t *testing.T) {
 	if !sessionOnly("/api/diagrams/files/3") || !sessionOnly("/api/guard/x") {
 		t.Error("sessionOnly")
 	}
-	if got := cacheKeyURI(httptest.NewRequest("GET", "/p", nil)); got != "/p" {
+	if got := cacheKeyURI(httptest.NewRequest(http.MethodGet, "/p", nil)); got != "/p" {
 		t.Error(got)
 	}
 }
@@ -277,7 +277,7 @@ func TestSpanRoute(t *testing.T) {
 
 func TestClientIPEdges(t *testing.T) {
 	trusted := []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}
-	r := httptest.NewRequest("GET", "/", nil)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.RemoteAddr = "noport"
 	if got := ClientIP(false, nil)(r); got != "noport" {
 		t.Error(got)

@@ -40,7 +40,7 @@ func (v DiagramViews) Counts(ctx context.Context, fileIDs []string) map[string]i
 	for i, id := range fileIDs {
 		cmds[i] = pipe.PFCount(ctx, diagramViewsKey(id))
 	}
-	pipe.Exec(ctx) // per-command errors read below; missing keys count 0
+	_, _ = pipe.Exec(ctx) // per-command errors read below; missing keys count 0
 	out := make(map[string]int64, len(fileIDs))
 	for i, c := range cmds {
 		out[fileIDs[i]], _ = c.Result()

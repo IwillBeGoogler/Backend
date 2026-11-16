@@ -193,7 +193,7 @@ func splitTopLevel(s string) []string {
 	for _, ch := range s {
 		if strings.ContainsRune("<([{", ch) {
 			depth++
-		} else if strings.ContainsRune(">)]}", ch) && !(ch == '>' && prev == '=') {
+		} else if strings.ContainsRune(">)]}", ch) && (ch != '>' || prev != '=') {
 			if depth > 0 {
 				depth--
 			}
@@ -480,7 +480,7 @@ func parseUmlLine(c *umlCtx, src string, ln int, doc *DslDoc, diag func(l, col i
 				for ; i < len(rest); i++ {
 					if rest[i] == '<' {
 						depth++
-					} else if rest[i] == '>' && !(i > 0 && rest[i-1] == '=') {
+					} else if rest[i] == '>' && (i <= 0 || rest[i-1] != '=') {
 						depth--
 						if depth == 0 {
 							break
@@ -967,7 +967,7 @@ func parseUmlLine(c *umlCtx, src string, ln int, doc *DslDoc, diag func(l, col i
 		}
 		var names []string
 		for _, t := range toks[1:] {
-			if !(t.k == "sym" && t.v == ",") {
+			if t.k != "sym" || t.v != "," {
 				names = append(names, t.v)
 			}
 		}

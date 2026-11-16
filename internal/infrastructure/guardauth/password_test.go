@@ -22,7 +22,7 @@ func TestWeakPasswordErr(t *testing.T) {
 		t.Errorf("detail = %q", got.Error())
 	}
 	other := errors.New("db down")
-	if weakPasswordErr(other) != other {
+	if !errors.Is(weakPasswordErr(other), other) {
 		t.Error("non-policy error must pass through")
 	}
 }

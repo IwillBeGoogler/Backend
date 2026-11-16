@@ -4,13 +4,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 )
 
 // diagramRoutes reads the route table from the sources, so a new route is
@@ -21,7 +22,7 @@ func diagramRoutes(t *testing.T) []string {
 	re := regexp.MustCompile(`HandleFunc\("([A-Z]+) (/[^"]*)"|HandleFunc\("([A-Z]+) "\+(p|v|base|DiagramPrefix|DiagramMCPPath)(?:\+"([^"]*)")?`)
 	seen := map[string]bool{}
 	for _, f := range files {
-		if strings.HasSuffix(f, "_test.go") || !(strings.HasPrefix(f, "diagram") || f == "admin_diagrams.go") {
+		if strings.HasSuffix(f, "_test.go") || (!strings.HasPrefix(f, "diagram") && f != "admin_diagrams.go") {
 			continue
 		}
 		src, err := os.ReadFile(f)

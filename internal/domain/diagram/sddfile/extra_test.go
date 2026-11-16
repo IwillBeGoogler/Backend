@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"strings"
@@ -271,7 +272,7 @@ func TestUnpackExtras(t *testing.T) {
 
 	// a header that lies about the size
 	good := newParts().build(t)
-	lie := bytes.Replace(good, []byte{byte(len(Mimetype)), 0, 0, 0}, []byte{byte(len(Mimetype)) + 1, 0, 0, 0}, -1)
+	lie := bytes.ReplaceAll(good, []byte{byte(len(Mimetype)), 0, 0, 0}, []byte{byte(len(Mimetype)) + 1, 0, 0, 0})
 	if _, err := ReadFile(lie, Limits{}); err == nil {
 		t.Error("lying header accepted")
 	}
@@ -475,7 +476,8 @@ func TestProjectNestedFileErrors(t *testing.T) {
 }
 
 func asErr(err error, target **Error) bool {
-	e, ok := err.(*Error)
+	e := &Error{}
+	ok := errors.As(err, &e)
 	if ok {
 		*target = e
 	}

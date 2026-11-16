@@ -80,7 +80,7 @@ func startFake(t *testing.T, o srvOpts) *fake {
 			return
 		}
 		defer raw.Close()
-		var c net.Conn = raw
+		var c = raw
 		encrypted := false
 		if o.implicitTLS {
 			c, encrypted = tls.Server(raw, scfg), true
