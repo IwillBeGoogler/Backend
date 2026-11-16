@@ -35,7 +35,7 @@ permissions:
 
 jobs:
   meta:
-    if: github.ref_name == 'main' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    if: github.ref_name == 'main' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     uses: ./.github/workflows/_meta.yml
     with:
       rollback-tag: ${{ inputs.rollback-tag }}
