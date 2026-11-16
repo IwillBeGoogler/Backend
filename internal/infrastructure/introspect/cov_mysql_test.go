@@ -34,7 +34,7 @@ func covMySQL(t *testing.T) diagram.DBTarget {
 	if err != nil {
 		t.Skipf("docker/mysql unavailable: %v", err)
 	}
-	t.Cleanup(func() { testcontainers.TerminateContainer(c) })
+	t.Cleanup(func() { _ = testcontainers.TerminateContainer(c) })
 	host, _ := c.Host(ctx)
 	mp, err := c.MappedPort(ctx, "3306/tcp")
 	if err != nil {

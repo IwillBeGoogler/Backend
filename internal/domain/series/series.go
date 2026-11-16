@@ -56,7 +56,7 @@ func Navigate(s Series, parts []Part, postID int) (Navigation, bool) {
 	}
 	n := Navigation{Series: s, Position: parts[i].Position, Posts: parts}
 	if i > 0 {
-		n.Prev = &parts[i-1]
+		n.Prev = &parts[i-1] //nolint:gosec // i is in range: IndexFunc found it and i > 0
 	}
 	if i < len(parts)-1 {
 		n.Next = &parts[i+1]

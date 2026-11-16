@@ -57,7 +57,7 @@ func Cache(rdb *redis.Client, next http.Handler) http.Handler {
 		if body, err := rdb.Get(ctx, key).Bytes(); err == nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("X-Cache", "HIT")
-			w.Write(body)
+			_, _ = w.Write(body) //nolint:gosec // the stored JSON of an earlier response, served with a JSON content type
 			return
 		}
 

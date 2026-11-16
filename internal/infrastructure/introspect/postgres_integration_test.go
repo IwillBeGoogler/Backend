@@ -35,7 +35,7 @@ func pgTarget(t *testing.T) (diagram.DBTarget, *pgxpool.Pool) {
 		if err != nil {
 			t.Skipf("docker unavailable: %v", err)
 		}
-		t.Cleanup(func() { testcontainers.TerminateContainer(pg) })
+		t.Cleanup(func() { _ = testcontainers.TerminateContainer(pg) })
 		if dsn, err = pg.ConnectionString(ctx, "sslmode=disable"); err != nil {
 			t.Fatal(err)
 		}
@@ -72,7 +72,7 @@ func TestIntrospectPostgres(t *testing.T) {
 			t.Fatalf("%s: %v", q, err)
 		}
 	}
-	t.Cleanup(func() { pool.Exec(ctx, `DROP SCHEMA `+schema+` CASCADE`) })
+	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DROP SCHEMA `+schema+` CASCADE`) })
 	var objectsBefore int
 	_ = pool.QueryRow(ctx, `SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1`, schema).Scan(&objectsBefore)
 

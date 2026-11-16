@@ -318,10 +318,6 @@ func TestIntrospectSQLiteDetails(t *testing.T) {
 	if v := by["v"]; v.Kind != "view" || len(v.Columns) != 1 || len(v.Indexes) != 0 {
 		t.Errorf("view = %+v", v)
 	}
-	names := []string{}
-	for _, ix := range child.Indexes {
-		names = append(names, ix.Name)
-	}
 	if len(child.Indexes) != 2 || !child.Indexes[0].Unique || !child.Indexes[1].Unique {
 		t.Errorf("child indexes = %v", child.Indexes)
 	}

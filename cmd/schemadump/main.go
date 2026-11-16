@@ -50,5 +50,5 @@ func run(prefix, out string) error {
 		_, err = fmt.Print(ddl)
 		return err
 	}
-	return os.WriteFile(out, []byte(ddl), 0o644)
+	return os.WriteFile(out, []byte(ddl), 0o644) //nolint:gosec // a schema dump meant to be read and committed, not a secret
 }

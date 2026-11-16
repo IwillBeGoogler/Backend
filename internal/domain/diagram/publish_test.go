@@ -22,7 +22,8 @@ func TestNewSlug(t *testing.T) {
 	if long := NewSlug(strings.Repeat("word ", 40)); !ValidSlug(long) || len(long) > 70 {
 		t.Errorf("long slug = %q", long)
 	}
-	if NewSlug("x") == NewSlug("x") {
+	first, second := NewSlug("x"), NewSlug("x")
+	if first == second {
 		t.Error("equal titles collide")
 	}
 	for _, bad := range []string{"", "-a", "a-", "A", "a b", "../x", "a_b"} {

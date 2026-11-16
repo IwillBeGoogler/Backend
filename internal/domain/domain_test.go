@@ -71,7 +71,8 @@ func TestSlugAndReadingTime(t *testing.T) {
 	if !strings.HasPrefix(s, "hello-world-go-1-26-") || len(s) != len("hello-world-go-1-26-")+8 {
 		t.Errorf("slug = %q", s)
 	}
-	if post.NewSlug("Hello") == post.NewSlug("Hello") {
+	first, second := post.NewSlug("Hello"), post.NewSlug("Hello")
+	if first == second {
 		t.Error("slugs of equal titles must differ")
 	}
 	if post.ReadingTime("") != 1 || post.ReadingTime(strings.Repeat("w ", 401)) != 3 {

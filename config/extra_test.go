@@ -75,7 +75,7 @@ func TestVaultFetchServerBehaviours(t *testing.T) {
 		_, err := v.fetch()
 		return err
 	}
-	if err := run(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(`{"auth":{"client_token":""}}`)) }); err == nil || !strings.Contains(err.Error(), "empty token") {
+	if err := run(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`{"auth":{"client_token":""}}`)) }); err == nil || !strings.Contains(err.Error(), "empty token") {
 		t.Errorf("empty token: %v", err)
 	}
 	if err := run(func(w http.ResponseWriter, r *http.Request) {
@@ -84,10 +84,10 @@ func TestVaultFetchServerBehaviours(t *testing.T) {
 			return
 		}
 		if strings.Contains(r.URL.Path, "login") {
-			w.Write([]byte(`{"auth":{"client_token":"t"}}`))
+			_, _ = w.Write([]byte(`{"auth":{"client_token":"t"}}`))
 			return
 		}
-		w.Write([]byte(`{"data":{"data":{"A":"b","N":null,"I":5}}}`))
+		_, _ = w.Write([]byte(`{"data":{"data":{"A":"b","N":null,"I":5}}}`))
 	}); err == nil || !strings.Contains(err.Error(), "revoke") {
 		t.Errorf("revoke failure: %v", err)
 	}

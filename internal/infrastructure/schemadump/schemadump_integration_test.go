@@ -34,7 +34,7 @@ func pool(t *testing.T) *pgxpool.Pool {
 		if err != nil {
 			t.Skipf("docker unavailable: %v", err)
 		}
-		t.Cleanup(func() { testcontainers.TerminateContainer(pg) })
+		t.Cleanup(func() { _ = testcontainers.TerminateContainer(pg) })
 		if dsn, err = pg.ConnectionString(ctx, "sslmode=disable"); err != nil {
 			t.Fatal(err)
 		}

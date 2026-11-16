@@ -147,7 +147,7 @@ func newFakeGitHub(t *testing.T) *fakeGitHub {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"access_token": "gh-token", "token_type": "bearer", "scope": "read:user,user:email"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"access_token": "gh-token", "token_type": "bearer", "scope": "read:user,user:email"})
 	})
 	authed := func(h func(w http.ResponseWriter)) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -162,9 +162,9 @@ func newFakeGitHub(t *testing.T) *fakeGitHub {
 		}
 	}
 	mux.HandleFunc("/user", authed(func(w http.ResponseWriter) {
-		json.NewEncoder(w).Encode(map[string]any{"id": f.id, "login": f.login, "name": f.name})
+		_ = json.NewEncoder(w).Encode(map[string]any{"id": f.id, "login": f.login, "name": f.name})
 	}))
-	mux.HandleFunc("/user/emails", authed(func(w http.ResponseWriter) { json.NewEncoder(w).Encode(f.emails) }))
+	mux.HandleFunc("/user/emails", authed(func(w http.ResponseWriter) { _ = json.NewEncoder(w).Encode(f.emails) }))
 	f.srv = httptest.NewServer(mux)
 	t.Cleanup(f.srv.Close)
 	return f

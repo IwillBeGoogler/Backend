@@ -169,8 +169,8 @@ func (s *covPG) serve(c net.Conn, sslRefuse bool) {
 	}
 	_, _ = c.Write(covMsg('R', 0, 0, 0, 0))
 	_, _ = c.Write(covMsg('S', []byte("standard_conforming_strings\x00on\x00")...))
-	c.Write(covMsg('S', []byte("client_encoding\x00UTF8\x00")...))
-	c.Write(covMsg('Z', 'I'))
+	_, _ = c.Write(covMsg('S', []byte("client_encoding\x00UTF8\x00")...))
+	_, _ = c.Write(covMsg('Z', 'I'))
 	for {
 		var h [5]byte
 		if _, err := io.ReadFull(c, h[:]); err != nil {
@@ -190,7 +190,7 @@ func (s *covPG) serve(c net.Conn, sslRefuse bool) {
 			n := s.n
 			s.mu.Unlock()
 			if n == s.failAt {
-				c.Write(covMsg('E', 'S', 'E', 'R', 'R', 'O', 'R', 0, 'C', '4', '2', '0', '0', '0', 0, 'M', 'b', 'o', 'o', 'm', 0, 0))
+				_, _ = c.Write(covMsg('E', 'S', 'E', 'R', 'R', 'O', 'R', 0, 'C', '4', '2', '0', '0', '0', 0, 'M', 'b', 'o', 'o', 'm', 0, 0))
 				c.Write(covMsg('Z', 'I'))
 				continue
 			}

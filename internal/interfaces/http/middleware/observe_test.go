@@ -10,13 +10,16 @@ import (
 	dto "github.com/prometheus/client_model/go"
 )
 
+// ctxProbe keys the test value put on the request context.
+type ctxProbe struct{}
+
 func TestObserveLabelsInnerRoute(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/things/{id}", func(w http.ResponseWriter, r *http.Request) {})
 	// An outer wrapper re-derives the request, as Cache/RequestID do.
 	inner := SpanRoute(mux)
 	h := Observe(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		inner.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), struct{}{}, 1)))
+		inner.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxProbe{}, 1)))
 	}))
 	before := counter(t, requests.WithLabelValues("GET", "GET /api/things/{id}", "200"))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/things/7", nil))

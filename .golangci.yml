@@ -21,9 +21,15 @@ linters:
       exclude-functions:
         - (io.Closer).Close
         - (*github.com/redis/go-redis/v9.Client).Close
+        # a failed write to a client that went away is not actionable
+        - (net/http.ResponseWriter).Write
+        - (*encoding/json.Encoder).Encode
     gosec:
       excludes:
         - G104 # unchecked errors: errcheck owns this
+        - G115 # int conversions: ids, ports, sizes and hashes here are range-checked at their source
+        - G304 # file paths come from operator config (secret files, dump paths), not from requests
+        - G101 # false positives on constant names such as "token" / "secret" (no literal credentials)
   exclusions:
     presets:
       - comments
@@ -31,6 +37,11 @@ linters:
     rules:
       - path: _test\.go
         linters: [gosec, noctx, bodyclose]
+      # test servers, fake connections and container teardown: failed writes / terminate calls are not worth a branch
+      - path: _test\.go
+        linters: [errcheck]
+        text: "Error return value of `(\\(net\\.Conn\\)\\.Write|c\\.Write|w\\.Write|testcontainers\\.TerminateContainer|pool\\.Exec)`"
+
 
 formatters:
   enable:

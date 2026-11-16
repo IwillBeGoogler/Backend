@@ -1044,7 +1044,7 @@ func TestAccountLifecycle(t *testing.T) {
 	if posts.Total != 0 {
 		t.Errorf("deleted user's posts still listed: %d", posts.Total)
 	}
-	ali = anon.login("ali", "reset-pass1") // restores
+	anon.login("ali", "reset-pass1") // restores
 	anon.do("GET", "/api/users/ali", nil, 200, nil)
 }
 

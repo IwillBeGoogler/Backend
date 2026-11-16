@@ -78,7 +78,7 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 	for rows.Next() {
 		var o obj
 		if err := rows.Scan(&o.name, &o.typ, &o.sql); err != nil {
-			rows.Close()
+			rows.Close() //nolint:sqlclosecheck // closed before the early return; Close is idempotent
 			return diagram.Introspected{}, err
 		}
 		objs = append(objs, o)
@@ -106,7 +106,7 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 			var cid int
 			var c info
 			if err := r.Scan(&cid, &c.name, &c.typ, &c.notnull, &c.dflt, &c.pk); err != nil {
-				r.Close()
+				r.Close() //nolint:sqlclosecheck // closed before the early return; Close is idempotent
 				return diagram.Introspected{}, err
 			}
 			cols = append(cols, c)
@@ -143,7 +143,7 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 				var seq int
 				var match string
 				if err := r.Scan(&f.id, &seq, &f.table, &f.from, &f.to, &f.onUpd, &f.onDelet, &match); err != nil {
-					r.Close()
+					r.Close() //nolint:sqlclosecheck // closed before the early return; Close is idempotent
 					return diagram.Introspected{}, err
 				}
 				fks = append(fks, f)
@@ -171,7 +171,7 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 				var seq, partial int
 				var ix ixRow
 				if err := r.Scan(&seq, &ix.name, &ix.unique, &ix.origin, &partial); err != nil {
-					r.Close()
+					r.Close() //nolint:sqlclosecheck // closed before the early return; Close is idempotent
 					return diagram.Introspected{}, err
 				}
 				list = append(list, ix)
@@ -191,7 +191,7 @@ func schemaFromSQLite(ctx context.Context, db *sql.DB) (diagram.Introspected, er
 					var seqno, cid int
 					var n sql.NullString
 					if err := ri.Scan(&seqno, &cid, &n); err != nil {
-						ri.Close()
+						ri.Close() //nolint:sqlclosecheck // closed before the early return; Close is idempotent
 						return diagram.Introspected{}, err
 					}
 					if !n.Valid {
