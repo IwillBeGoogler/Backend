@@ -11,9 +11,12 @@ name: CD
 #   role iwillbegoogler-production-ci      issue/destroy secret_ids of AppRole iwillbegoogler-production (deploy)
 # Repo/org vars: APP_NAME (e.g. iwillbegoogler), VAULT_ADDR, TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID (optional).
 on:
-  push:
-    # Literal on purpose: GitHub does not evaluate expressions in triggers.
-    branches: [main] # dev: CI only (no dev environment)
+  # Starts when CI (ci.yml) has succeeded on main: CI is not run again here. workflow_run always uses this file from
+  # the default branch, and checks out its tip. A manual run skips the CI check.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   # Manual run: rebuild branch HEAD, or roll back by dispatching an existing tag.
   workflow_dispatch:
     inputs:
@@ -32,7 +35,7 @@ permissions:
 
 jobs:
   meta:
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     uses: ./.github/workflows/_meta.yml
     with:
       rollback-tag: ${{ inputs.rollback-tag }}
@@ -132,6 +135,6 @@ jobs:
       results: ${{ toJSON(needs) }}
       tag: *tag
       health-url: https://iwillbegoogler.uz/api/healthz
-      title: ${{ needs.meta.outputs.rollback == 'true' && format('rollback to {0}', inputs.rollback-tag) || '' }}
+      title: ${{ needs.meta.outputs.rollback == 'true' && format('rollback to {0}', inputs.rollback-tag) || github.event.workflow_run.head_commit.message || '' }}
     secrets:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

@@ -4,13 +4,13 @@ name: CI
 #   lint + vuln + test + build -> scan (images, not pushed) -> notify
 # Jobs are reusable workflows (_*.yml, defaults in their inputs); this file
 # passes only what is specific to this service. Long steps are plain scripts in ../scripts/.
-# Deploys are CD's job: a merged PR is a push to its base branch, CD runs then.
+# Deploys are CD's job: it starts after CI succeeds on main (workflow_run).
 on:
   pull_request:
     # Literal on purpose: GitHub does not evaluate expressions in triggers.
     branches: [main, dev]
   push:
-    branches: [dev] # integration branch: CI only, main is checked by cd.yml
+    branches: [main, dev] # a push to main runs CI, and CD (cd.yml) starts after it succeeds
 
 # A newer push to the same PR makes the older run stale.
 concurrency:
