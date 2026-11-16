@@ -33,9 +33,9 @@ type thumbSize struct {
 }
 
 type thumbNode struct {
-	ID       string     `json:"id"`
-	Type     string     `json:"type"`
-	ParentID string     `json:"parentId"`
+	ID       string                 `json:"id"`
+	Type     string                 `json:"type"`
+	ParentID string                 `json:"parentId"`
 	Position struct{ X, Y float64 } `json:"position"`
 	thumbSize
 	Measured *thumbSize `json:"measured"`
