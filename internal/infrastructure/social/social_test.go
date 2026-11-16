@@ -103,7 +103,7 @@ func TestGitHub(t *testing.T) {
 	var user, emails any
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
+		_ = r.ParseForm()
 		if r.Form.Get("code") == "badcode" {
 			http.Error(w, "nope", http.StatusBadRequest)
 			return
@@ -245,7 +245,7 @@ func newFakeOIDC(t *testing.T) *fakeOIDC {
 		json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{Key: &f.key.PublicKey, KeyID: "k", Algorithm: "RS256", Use: "sig"}}})
 	})
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
+		_ = r.ParseForm()
 		if f.tokenErr || r.Form.Get("code_verifier") == "" {
 			http.Error(w, "bad", http.StatusBadRequest)
 			return

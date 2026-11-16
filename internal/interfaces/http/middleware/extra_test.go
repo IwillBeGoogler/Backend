@@ -241,7 +241,7 @@ func TestRecorderUnwrapAndWrite(t *testing.T) {
 	if rec.Unwrap() != w {
 		t.Fatal("unwrap")
 	}
-	rec.Write([]byte("x")) // unbuffered
+	_, _ = rec.Write([]byte("x")) // unbuffered
 	if rec.buf.Len() != 0 || !rec.wrote {
 		t.Fatal("unbuffered write")
 	}

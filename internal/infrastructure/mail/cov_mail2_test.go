@@ -49,7 +49,7 @@ func covServer2(t *testing.T, dropAfterData bool) string {
 						c.Write([]byte("354 go\r\n"))
 						if dropAfterData {
 							if tc, ok := c.(*net.TCPConn); ok {
-								tc.SetLinger(0)
+								_ = tc.SetLinger(0)
 							}
 							return
 						}

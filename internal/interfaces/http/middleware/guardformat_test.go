@@ -37,8 +37,8 @@ func TestGuardFormatSuccessEnvelope(t *testing.T) {
 			t.Errorf("%s: %d %q", c.name, rec.Code, rec.Header().Get("Content-Type"))
 		}
 		var got, want any
-		json.Unmarshal(rec.Body.Bytes(), &got)
-		json.Unmarshal([]byte(c.want), &want)
+		_ = json.Unmarshal(rec.Body.Bytes(), &got)
+		_ = json.Unmarshal([]byte(c.want), &want)
 		if b1, _ := json.Marshal(got); string(b1) != mustJSON(want) {
 			t.Errorf("%s: body = %s, want %s", c.name, rec.Body, c.want)
 		}

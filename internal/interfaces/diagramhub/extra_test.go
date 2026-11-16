@@ -169,7 +169,7 @@ func TestMemorySlots(t *testing.T) {
 	if ok, _ := s.Acquire(bg, "f", "b", 1); ok {
 		t.Fatal("over cap")
 	}
-	s.Release(bg, "f", "a")
+	_ = s.Release(bg, "f", "a")
 	if m, _ := s.Members(bg, "f"); len(m) != 0 {
 		t.Fatal(m)
 	}
@@ -179,7 +179,7 @@ func TestRefreshSlot(t *testing.T) {
 	fs := &flakySlots{MemorySlots: NewMemorySlots()}
 	h, _ := fixture(t, store(t, "f"), Options{Slots: fs})
 	h.refreshSlot(bg, "f", alice) // not a member: nothing
-	fs.Acquire(bg, "f", alice, 2)
+	_, _ = fs.Acquire(bg, "f", alice, 2)
 	h.refreshSlot(bg, "f", alice)
 	fs.members = true
 	h.refreshSlot(bg, "f", alice) // store error: ignored

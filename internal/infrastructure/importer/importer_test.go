@@ -63,7 +63,7 @@ func TestParse(t *testing.T) {
 func TestFetchRefusesPrivateAddresses(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(page))
+		_, _ = w.Write([]byte(page))
 	}))
 	defer srv.Close()
 

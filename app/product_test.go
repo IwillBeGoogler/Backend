@@ -142,10 +142,10 @@ func TestSignupCaptchaAndHoneypot(t *testing.T) {
 	cf := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		if r.Form.Get("response") == "human" {
-			w.Write([]byte(`{"success":true}`))
+			_, _ = w.Write([]byte(`{"success":true}`))
 			return
 		}
-		w.Write([]byte(`{"success":false}`))
+		_, _ = w.Write([]byte(`{"success":false}`))
 	}))
 	defer cf.Close()
 	e := start(t, func(c *config.Config) {

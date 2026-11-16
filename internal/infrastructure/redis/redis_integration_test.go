@@ -146,7 +146,7 @@ func TestRedisAdapters(t *testing.T) {
 		}
 		// Cached for a minute: a new hit does not reorder yet.
 		for i := range 5 {
-			v.Hit(ctx, 2, "x"+strconv.Itoa(i))
+			_ = v.Hit(ctx, 2, "x"+strconv.Itoa(i))
 		}
 		if again, _ := v.Trending(ctx, 7, 2); again[0] != 3 {
 			t.Errorf("trending cache bypassed: %v", again)
@@ -164,7 +164,7 @@ func TestRedisAdapters(t *testing.T) {
 		if none, err := empty.Trending(ctx, 1, 5); err != nil || len(none) != 0 {
 			t.Fatalf("empty trending = %v, %v", none, err)
 		}
-		empty.Hit(ctx, 77, "new-viewer")
+		_ = empty.Hit(ctx, 77, "new-viewer")
 		if none, _ := empty.Trending(ctx, 1, 5); len(none) != 0 {
 			t.Errorf("empty result not cached: %v", none)
 		}

@@ -222,7 +222,7 @@ func serve(t *testing.T, listen string, h http.Handler) net.Listener {
 		t.Fatal(err)
 	}
 	srv := &http.Server{Handler: h}
-	go srv.Serve(l)
+	go func() { _ = srv.Serve(l) }()
 	t.Cleanup(func() { srv.Close() })
 	return l
 }

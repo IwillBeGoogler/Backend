@@ -1067,7 +1067,7 @@ func TestUploadsToMinIO(t *testing.T) {
 		var buf bytes.Buffer
 		mw := multipart.NewWriter(&buf)
 		fw, _ := mw.CreateFormFile("file", name)
-		fw.Write(data)
+		_, _ = fw.Write(data)
 		mw.Close()
 		req, _ := http.NewRequest(http.MethodPost, ali.base+"/api/uploads", &buf)
 		req.Header.Set("Content-Type", mw.FormDataContentType())

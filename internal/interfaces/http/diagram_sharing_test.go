@@ -99,7 +99,7 @@ func multipartBody(t *testing.T, field, filename string, data []byte) ([]byte, s
 	if err != nil {
 		t.Fatal(err)
 	}
-	part.Write(data)
+	_, _ = part.Write(data)
 	w.Close()
 	return buf.Bytes(), w.FormDataContentType()
 }

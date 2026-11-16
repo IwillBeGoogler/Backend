@@ -18,7 +18,7 @@ func uploadRaw(c *client, field string, data []byte) int {
 	mw := multipart.NewWriter(&buf)
 	if field != "" {
 		fw, _ := mw.CreateFormFile(field, "f.bin")
-		fw.Write(data)
+		_, _ = fw.Write(data)
 	}
 	mw.Close()
 	req, _ := http.NewRequest(http.MethodPost, c.base+"/api/uploads", &buf)

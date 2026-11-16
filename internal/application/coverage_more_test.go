@@ -41,7 +41,7 @@ func TestDiagramEngagement(t *testing.T) {
 	if c.Claps != 3 || c.MyClaps != 3 || len(notes.got) != 1 {
 		t.Errorf("claps = %+v notes %d", c, len(notes.got))
 	}
-	d.ClapDiagram(dctx, bob, l.Slug, 1) // not the first clap: no second notice
+	_, _ = d.ClapDiagram(dctx, bob, l.Slug, 1) // not the first clap: no second notice
 	if len(notes.got) != 1 {
 		t.Error("notified twice")
 	}

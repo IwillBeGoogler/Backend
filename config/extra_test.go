@@ -16,7 +16,7 @@ func (m mapEnv) Lookup(k string) (string, bool) { v, ok := m[k]; return v, ok }
 func TestFileLookuperRaw(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "s")
-	os.WriteFile(p, []byte("$HOME-literal\n"), 0o600)
+	_ = os.WriteFile(p, []byte("$HOME-literal\n"), 0o600)
 	l := &fileLookuper{next: mapEnv{"SECRET_FILE": p}}
 	if v, ok := l.LookupRaw("SECRET"); !ok || v != "$HOME-literal" {
 		t.Errorf("raw = %q %v", v, ok)
@@ -61,7 +61,7 @@ func TestVaultFetchFailures(t *testing.T) {
 		}
 	}
 	junk := filepath.Join(t.TempDir(), "junk.pem")
-	os.WriteFile(junk, []byte("not a cert"), 0o600)
+	_ = os.WriteFile(junk, []byte("not a cert"), 0o600)
 	if _, err := mk(map[string]string{"VAULT_ADDR": "https://v", "VAULT_KV_PATH": "kv/x", "VAULT_CACERT": junk, "APP_ENV": "dev"}).fetch(); err == nil || !strings.Contains(err.Error(), "no certificates") {
 		t.Errorf("junk ca: %v", err)
 	}

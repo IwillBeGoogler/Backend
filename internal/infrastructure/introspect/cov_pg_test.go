@@ -159,7 +159,7 @@ func (s *covPG) serve(c net.Conn, sslRefuse bool) {
 		return
 	}
 	if binary.BigEndian.Uint32(b) == 80877103 { // SSLRequest
-		c.Write([]byte("N"))
+		_, _ = c.Write([]byte("N"))
 		if sslRefuse {
 			return
 		}
@@ -167,8 +167,8 @@ func (s *covPG) serve(c net.Conn, sslRefuse bool) {
 			return
 		}
 	}
-	c.Write(covMsg('R', 0, 0, 0, 0))
-	c.Write(covMsg('S', []byte("standard_conforming_strings\x00on\x00")...))
+	_, _ = c.Write(covMsg('R', 0, 0, 0, 0))
+	_, _ = c.Write(covMsg('S', []byte("standard_conforming_strings\x00on\x00")...))
 	c.Write(covMsg('S', []byte("client_encoding\x00UTF8\x00")...))
 	c.Write(covMsg('Z', 'I'))
 	for {

@@ -11,7 +11,7 @@ import (
 
 func pngOf(w, h int) *bytes.Reader {
 	var buf bytes.Buffer
-	png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, w, h)))
+	_ = png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, w, h)))
 	return bytes.NewReader(buf.Bytes())
 }
 
@@ -44,7 +44,7 @@ func TestProcessRejectsNonImages(t *testing.T) {
 
 func TestValidate(t *testing.T) {
 	var good bytes.Buffer
-	png.Encode(&good, image.NewRGBA(image.Rect(0, 0, 4, 4)))
+	_ = png.Encode(&good, image.NewRGBA(image.Rect(0, 0, 4, 4)))
 	if err := Validate(good.Bytes()); err != nil {
 		t.Errorf("valid png: %v", err)
 	}

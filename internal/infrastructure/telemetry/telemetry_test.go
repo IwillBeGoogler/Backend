@@ -139,7 +139,7 @@ func TestSetupEnabledExportsToCollector(t *testing.T) {
 	var mu sync.Mutex
 	paths := map[string]int{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.Copy(io.Discard, r.Body)
+		_, _ = io.Copy(io.Discard, r.Body)
 		mu.Lock()
 		paths[r.URL.Path]++
 		mu.Unlock()

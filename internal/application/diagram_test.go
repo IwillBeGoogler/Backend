@@ -389,7 +389,7 @@ func TestDiagramDeleteFolder(t *testing.T) {
 	a, _, _ := d.CreateFolder(dctx, alice, pid, NewFolder{Name: "a"})
 	b, _, _ := d.CreateFolder(dctx, alice, pid, NewFolder{Name: "b", ParentID: &a.ID})
 	f1, _, _ := d.CreateFile(dctx, alice, pid, NewDiagramFile{Name: "one", FolderID: &a.ID})
-	d.CreateFile(dctx, alice, pid, NewDiagramFile{Name: "two", FolderID: &b.ID})
+	_, _, _ = d.CreateFile(dctx, alice, pid, NewDiagramFile{Name: "two", FolderID: &b.ID})
 
 	folders, files, err := d.DeleteFolder(dctx, alice, a.ID)
 	if err != nil || folders != 2 || files != 2 {
@@ -436,7 +436,7 @@ func TestDiagramDuplicateFolder(t *testing.T) {
 		t.Error("copied document lost its node")
 	}
 	var doc struct{ ID string }
-	json.Unmarshal(got.Data, &doc)
+	_ = json.Unmarshal(got.Data, &doc)
 	if doc.ID != cf.ID {
 		t.Errorf("copied document id = %q, want %q", doc.ID, cf.ID)
 	}
