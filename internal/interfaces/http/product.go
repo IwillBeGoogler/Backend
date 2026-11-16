@@ -87,7 +87,8 @@ func (h *Handler) publicConfig(w http.ResponseWriter, r *http.Request) {
 
 // trackEvent records a product analytics event.
 //
-// name is page_view, read_time (post_id and value = seconds required) or
+// name is page_view, read_time (post_id and value = seconds required),
+// active_time (value = seconds the site was open in a visible tab) or
 // signup_open. visitor is a random id (8-64 letters, digits, dashes) the
 // client keeps only after the reader accepts analytics cookies; send
 // nothing without consent. The signed-in user is attached from the session.

@@ -13,7 +13,7 @@ type fakeSiteRepo struct{ calls int }
 
 func (f *fakeSiteRepo) Counts(context.Context) (SiteCounts, error) {
 	f.calls++
-	return SiteCounts{Posts: 7, Diagrams: 2, Users: 9, Visitors: 40}, nil
+	return SiteCounts{Posts: 7, Diagrams: 2, Users: 9, Visitors: 40, VisitorsToday: 5, ActiveSeconds: 1200, ActiveVisits: 4}, nil
 }
 
 func (f *fakeSiteRepo) PublicPosts(context.Context) ([]PostRef, error) {
@@ -64,6 +64,9 @@ func TestSiteStats(t *testing.T) {
 	pub, err := s.Public(context.Background())
 	if err != nil {
 		t.Fatal(err)
+	}
+	if pub.Totals.VisitorsToday != 5 || pub.Totals.AvgVisitSeconds != 300 {
+		t.Errorf("today / avg visit = %d / %v", pub.Totals.VisitorsToday, pub.Totals.AvgVisitSeconds)
 	}
 	if pub.Totals.PostViews != 280 || pub.Totals.DiagramViews != 6 || pub.Totals.Visitors != 40 || pub.Totals.Users != 9 {
 		t.Errorf("totals = %+v", pub.Totals)

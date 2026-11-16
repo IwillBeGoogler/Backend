@@ -49,6 +49,12 @@ func TestAnalyticsTrack(t *testing.T) {
 				t.Errorf("value = %d", e.Value)
 			}
 		}},
+		{name: "active time without value", ev: AnalyticsEvent{Name: EventActiveTime, Visitor: "abcdefgh1"}, wantErr: true},
+		{name: "active time capped, no post needed", ev: AnalyticsEvent{Name: EventActiveTime, Visitor: "abcdefgh1", Value: 1 << 20}, check: func(t *testing.T, e AnalyticsEvent) {
+			if e.Value != MaxReadSeconds {
+				t.Errorf("value = %d", e.Value)
+			}
+		}},
 		{name: "negative value floored and fields cleaned", ev: AnalyticsEvent{Name: EventPageView, Visitor: "abcdefgh1", Value: -4, Path: long, Lang: "en-US-extra", Referrer: " https://Example.COM/a?b=c "}, check: func(t *testing.T, e AnalyticsEvent) {
 			if e.Value != 0 || len(e.Path) != 300 || e.Lang != "en-US-ex" || e.Referrer != "example.com" {
 				t.Errorf("event = %+v", e)

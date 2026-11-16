@@ -16,12 +16,13 @@ const (
 	EventPageView   = "page_view"
 	EventReadTime   = "read_time"   // value: seconds actively on a post
 	EventSignupOpen = "signup_open" // the signup form was shown
+	EventActiveTime = "active_time" // value: seconds the site was open and visible in a tab (any page)
 	EventSignup     = "signup"      // server-side
 	EventPublish    = "publish"     // server-side: a post went public
 )
 
 // ClientEvents are the names POST /api/events accepts.
-var ClientEvents = map[string]bool{EventPageView: true, EventReadTime: true, EventSignupOpen: true}
+var ClientEvents = map[string]bool{EventPageView: true, EventReadTime: true, EventSignupOpen: true, EventActiveTime: true}
 
 // AnalyticsRetention is how long raw events are kept.
 const AnalyticsRetention = 400 * 24 * time.Hour
@@ -135,12 +136,18 @@ func (a *Analytics) record(ctx context.Context, e AnalyticsEvent) error {
 	}
 	e.Lang = clip(e.Lang, 8)
 	e.Referrer = clip(refHost(e.Referrer), 120)
-	if e.Name == EventReadTime {
+	switch e.Name {
+	case EventReadTime:
 		if e.PostID <= 0 || e.Value <= 0 {
 			return domain.Invalid("read_time needs post_id and value > 0")
 		}
 		e.Value = min(e.Value, MaxReadSeconds)
-	} else {
+	case EventActiveTime:
+		if e.Value <= 0 {
+			return domain.Invalid("active_time needs value > 0")
+		}
+		e.Value = min(e.Value, MaxReadSeconds)
+	default:
 		e.Value = max(e.Value, 0)
 	}
 	return a.Repo.Insert(ctx, e)

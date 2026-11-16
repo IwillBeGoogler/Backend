@@ -31,6 +31,12 @@ type SiteCounts struct {
 	Users       int   `json:"users"`        // active accounts
 	Visitors    int   `json:"visitors"`     // distinct page_view visitors, all time
 	ReadSeconds int64 `json:"read_seconds"` // all-time reading time on published posts
+	// VisitorsToday are the distinct page_view visitors since 00:00 UTC.
+	VisitorsToday int `json:"visitors_today"`
+	// ActiveSeconds is the time the site was open in a visible tab (active_time), and ActiveVisits the distinct
+	// (visitor, UTC day) pairs that sent any: both over the last SiteStatsDays days.
+	ActiveSeconds int64 `json:"active_seconds"`
+	ActiveVisits  int   `json:"active_visits"`
 }
 
 // PostRef is a published post as the stats list it.
@@ -70,6 +76,10 @@ type SiteTotals struct {
 	Diagrams     int   `json:"diagrams"`
 	Users        int   `json:"users"`
 	ReadSeconds  int64 `json:"read_seconds"`
+	// VisitorsToday: distinct visitors since 00:00 UTC.
+	VisitorsToday int `json:"visitors_today"`
+	// AvgVisitSeconds: average time a visitor spends on the site in a day (open, visible tab), last 30 days; 0 when unknown.
+	AvgVisitSeconds float64 `json:"avg_visit_seconds"`
 }
 
 // TopPost is a post with its unique views.
@@ -155,8 +165,11 @@ func (s *SiteStats) snapshot(ctx context.Context) (siteSnapshot, error) {
 		return siteSnapshot{}, err
 	}
 	snap := siteSnapshot{totals: SiteTotals{Visitors: counts.Visitors, Posts: counts.Posts, Diagrams: counts.Diagrams, Users: counts.Users,
-		ReadSeconds: counts.ReadSeconds},
+		ReadSeconds: counts.ReadSeconds, VisitorsToday: counts.VisitorsToday},
 		posts: make([]TopPost, len(posts)), diagrams: make([]TopDiagram, len(diagrams))}
+	if counts.ActiveVisits > 0 {
+		snap.totals.AvgVisitSeconds = float64(counts.ActiveSeconds) / float64(counts.ActiveVisits)
+	}
 
 	var pv map[int]int64
 	if s.Posts != nil {

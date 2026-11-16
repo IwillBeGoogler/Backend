@@ -26,8 +26,12 @@ func (r *SiteStatsRepo) Counts(ctx context.Context) (application.SiteCounts, err
 		(SELECT count(*) FROM users WHERE deleted_at IS NULL),
 		(SELECT count(DISTINCT `+who+`) FROM analytics_events WHERE name = 'page_view'),
 		(SELECT COALESCE(sum(p.read_seconds), 0) FROM posts p JOIN users u ON u.id = p.user_id
-			WHERE p.status = 'published' AND u.deleted_at IS NULL)`).
-		Scan(&c.Posts, &c.Diagrams, &c.Users, &c.Visitors, &c.ReadSeconds)
+			WHERE p.status = 'published' AND u.deleted_at IS NULL),
+		(SELECT count(DISTINCT `+who+`) FROM analytics_events WHERE name = 'page_view' AND at >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'),
+		(SELECT COALESCE(sum(value), 0) FROM analytics_events WHERE name = 'active_time' AND at >= now() - make_interval(days => $1)),
+		(SELECT count(DISTINCT (`+who+`, date_trunc('day', at AT TIME ZONE 'UTC'))) FROM analytics_events
+			WHERE name = 'active_time' AND at >= now() - make_interval(days => $1))`, application.SiteStatsDays).
+		Scan(&c.Posts, &c.Diagrams, &c.Users, &c.Visitors, &c.ReadSeconds, &c.VisitorsToday, &c.ActiveSeconds, &c.ActiveVisits)
 	return c, err
 }
 

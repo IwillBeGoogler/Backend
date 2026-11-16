@@ -10,8 +10,12 @@ import (
 // users, and the five most viewed posts and public diagrams. Nothing
 // private is included. Cached for a minute.
 //
+// visitors_today counts distinct visitors since 00:00 UTC; avg_visit_seconds
+// is the average time a visitor keeps the site open in a visible tab per day
+// over the last 30 days (0 when unknown). Both come from consenting visitors.
+//
 // Response: {"data": {totals: {post_views, diagram_views, visitors, posts,
-// diagrams, users}, top_posts: [{id, slug, title, author, views}],
+// diagrams, users, read_seconds, visitors_today, avg_visit_seconds}, top_posts: [{id, slug, title, author, views}],
 // top_diagrams: [{slug, title, author, views}]}}.
 // Auth: none.
 //
