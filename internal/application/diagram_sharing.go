@@ -582,6 +582,11 @@ func (d *Diagrams) StoreAsset(ctx context.Context, actor int, data []byte, only 
 	if mime == "" || len(only) > 0 && !slicesContains(only, mime) {
 		return StoredAsset{}, diagram.UnsupportedMedia("Unsupported file type. Allowed: PNG, JPEG, WebP, SVG")
 	}
+	return d.putAsset(ctx, actor, data, mime)
+}
+
+// putAsset stores checked bytes of a known type by content hash (once).
+func (d *Diagrams) putAsset(ctx context.Context, actor int, data []byte, mime string) (StoredAsset, error) {
 	hash := diagram.HashBytes(data)
 	put := func() error {
 		return d.Blobs.Put(ctx, blobKey(hash), bytes.NewReader(data), int64(len(data)), mime)

@@ -201,6 +201,10 @@ type SharingRepository interface {
 	// SetThumbnail points a file at a preview asset; it does not touch the
 	// file's version.
 	SetThumbnail(ctx context.Context, fileID, hash string) error
+	// FillThumbnail sets the preview only while the file has none, so a
+	// generated one never replaces one the editor saved; false: it had one
+	// (or the file is gone).
+	FillThumbnail(ctx context.Context, fileID, hash string) (bool, error)
 
 	// Library returns Rev 0 when the project never saved one.
 	Library(ctx context.Context, projectID string) (Library, error)

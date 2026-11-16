@@ -204,6 +204,18 @@ func (m *Memory) SetThumbnail(_ context.Context, fileID, hash string) error {
 	return nil
 }
 
+func (m *Memory) FillThumbnail(_ context.Context, fileID, hash string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	f, ok := m.files[fileID]
+	if !ok || f.ThumbnailHash != nil {
+		return false, nil
+	}
+	f.ThumbnailHash = &hash
+	m.files[fileID] = f
+	return true, nil
+}
+
 func (m *Memory) Library(_ context.Context, projectID string) (diagram.Library, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

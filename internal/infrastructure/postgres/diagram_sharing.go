@@ -145,6 +145,11 @@ func (r *DiagramRepo) SetThumbnail(ctx context.Context, fileID, hash string) err
 	return execOne(ctx, r.db, `UPDATE dg_files SET thumbnail_hash = $2 WHERE id = $1`, fileID, hash)
 }
 
+func (r *DiagramRepo) FillThumbnail(ctx context.Context, fileID, hash string) (bool, error) {
+	tag, err := r.db.Exec(ctx, `UPDATE dg_files SET thumbnail_hash = $2 WHERE id = $1 AND thumbnail_hash IS NULL`, fileID, hash)
+	return tag.RowsAffected() > 0, err
+}
+
 func (r *DiagramRepo) Library(ctx context.Context, projectID string) (diagram.Library, error) {
 	var l diagram.Library
 	err := r.db.QueryRow(ctx, `SELECT rev, data FROM dg_project_library WHERE project_id = $1`, projectID).Scan(&l.Rev, &l.Doc)
