@@ -14,6 +14,7 @@ import (
 	"github.com/hibiken/asynq"
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/diagram/diagramtest"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 )
 
@@ -135,5 +136,19 @@ func TestWebhookTaskBadPayloadSkipsRetry(t *testing.T) {
 		if err := h(context.Background(), asynq.NewTask(TypeWebhook, []byte(payload))); !errors.Is(err, asynq.SkipRetry) {
 			t.Errorf("%q: err = %v, want SkipRetry", payload, err)
 		}
+	}
+}
+
+func TestDiagramThumbTask(t *testing.T) {
+	d := application.NewDiagrams(diagramtest.NewMemory(), nil)
+	h := diagramThumbTask(d)
+	for _, payload := range []string{"not json", "{}", `{"file_id":""}`} {
+		if err := h(context.Background(), asynq.NewTask(TypeDiagramThumb, []byte(payload))); !errors.Is(err, asynq.SkipRetry) {
+			t.Errorf("%q: err = %v, want SkipRetry", payload, err)
+		}
+	}
+	// no blob store: nothing to do, no error
+	if err := h(context.Background(), asynq.NewTask(TypeDiagramThumb, []byte(`{"file_id":"fil_x"}`))); err != nil {
+		t.Errorf("err = %v", err)
 	}
 }

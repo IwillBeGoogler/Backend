@@ -3,7 +3,6 @@ package diagram
 import (
 	"encoding/json"
 	"fmt"
-	"html"
 	"math"
 	"regexp"
 	"strconv"
@@ -173,6 +172,9 @@ func num(v float64) string {
 	return strconv.FormatFloat(r, 'f', -1, 64)
 }
 
+// escAttr escapes like the editor: &#NN; for each of & < > " '.
+var escAttr = strings.NewReplacer("&", "&#38;", "<", "&#60;", ">", "&#62;", `"`, "&#34;", "'", "&#39;").Replace
+
 func colorOr(v any, def string) string {
 	if s, ok := v.(string); ok && hexColor.MatchString(s) {
 		return s
@@ -217,7 +219,7 @@ func buildThumbnail(nodes []thumbNode, edges []thumbEdge, W, H, pad float64, bac
 	scale := math.Min((W-pad*2)/math.Max(1, maxX-minX), (H-pad*2)/math.Max(1, maxY-minY))
 	ox := (W-(maxX-minX)*scale)/2 - minX*scale
 	oy := (H-(maxY-minY)*scale)/2 - minY*scale
-	esc := html.EscapeString
+	esc := escAttr
 	byID := make(map[string]rect, len(rects))
 	for _, r := range rects {
 		byID[r.n.ID] = r // last wins, like the editor's Map
