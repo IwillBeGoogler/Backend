@@ -40,6 +40,9 @@ type Diagrams struct {
 	Users DiagramUsers
 	// Blobs keeps asset and thumbnail bytes by content hash.
 	Blobs Storage
+	// ThumbJobs draws missing previews in the background (nil: reads leave
+	// them missing).
+	ThumbJobs ThumbnailQueue
 	// MaxAssetBytes caps one uploaded image.
 	MaxAssetBytes int
 	// SanitizeSVG cleans an SVG upload. isSVG says the bytes look like SVG;

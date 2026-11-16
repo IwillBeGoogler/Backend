@@ -36,6 +36,7 @@ const (
 	TypeSendEmail    = "email:send"
 	TypeThumbnail    = "image:thumbnail"
 	TypeWebhook      = "diagram:webhook"
+	TypeDiagramThumb = "diagram:thumbnail"
 	TypeSweep        = "sweep" // periodic: overdue publishing, purges, expired suspensions
 )
 
@@ -140,6 +141,18 @@ func (c *Client) Thumbnail(ctx context.Context, key string) error {
 	return c.enqueue(ctx, TypeThumbnail, keyPayload{key})
 }
 
+type filePayload struct {
+	FileID string `json:"file_id"`
+}
+
+// DiagramThumbnail queues drawing a file's missing preview. The task id makes
+// repeated reads of the same file share one job; a file that cannot be drawn
+// stays archived under that id, so it is not retried on every read.
+func (c *Client) DiagramThumbnail(ctx context.Context, fileID string) error {
+	return c.enqueue(ctx, TypeDiagramThumb, filePayload{fileID}, asynq.TaskID("dgthumb:"+fileID),
+		asynq.MaxRetry(3), asynq.Timeout(30*time.Second), asynq.Retention(10*time.Minute))
+}
+
 type deliveryPayload struct {
 	ID string `json:"id"`
 }
@@ -172,6 +185,8 @@ type Handlers struct {
 	Uploads *application.UploadSweeper
 	// Hooks sends diagram webhook deliveries (nil: the task is not handled).
 	Hooks *application.WebhookDispatcher
+	// Diagrams draws missing file previews (nil: the task is not handled).
+	Diagrams *application.Diagrams
 	// InvalidateCache drops cached HTTP responses after a job changed public
 	// data (nil: middleware.ResetCache on the worker's Redis).
 	InvalidateCache func(context.Context) error
@@ -207,6 +222,9 @@ func NewWorker(rdb *redis.Client, h Handlers) *Worker {
 	})
 	if h.Hooks != nil {
 		mux.HandleFunc(TypeWebhook, webhookTask(h.Hooks))
+	}
+	if h.Diagrams != nil {
+		mux.HandleFunc(TypeDiagramThumb, diagramThumbTask(h.Diagrams))
 	}
 	mux.HandleFunc(TypeSweep, func(ctx context.Context, _ *asynq.Task) error {
 		// The sweep runs every minute; invalidate only when it had work,
@@ -254,6 +272,21 @@ func webhookTask(hooks *application.WebhookDispatcher) asynq.HandlerFunc {
 			return fmt.Errorf("%w: bad payload", asynq.SkipRetry)
 		}
 		return hooks.Deliver(ctx, p.ID)
+	}
+}
+
+// diagramThumbTask draws a file's missing preview.
+func diagramThumbTask(d *application.Diagrams) asynq.HandlerFunc {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var p filePayload
+		if err := json.Unmarshal(t.Payload(), &p); err != nil || p.FileID == "" {
+			return fmt.Errorf("%w: bad payload", asynq.SkipRetry)
+		}
+		err := d.RenderThumbnail(ctx, p.FileID)
+		if errors.Is(err, application.ErrThumbnailUnreadable) {
+			return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
+		}
+		return err
 	}
 }
 

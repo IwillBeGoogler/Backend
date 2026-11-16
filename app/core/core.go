@@ -66,6 +66,7 @@ func (s *Services) Handlers() queue.Handlers {
 	h := queue.Handlers{Blog: s.Blog, Accounts: s.Accounts, Mailer: s.Mailer, Storage: s.Storage, Analytics: s.Analytics}
 	if s.Diagrams != nil {
 		h.Hooks = s.Diagrams.Hooks
+		h.Diagrams = s.Diagrams
 	}
 	if ledger, ok := s.Uploads.(application.UnusedUploads); ok && s.Storage != nil && s.UploadGrace > 0 {
 		h.Uploads = &application.UploadSweeper{Ledger: ledger, Storage: s.Storage, Grace: s.UploadGrace, Batch: 50}
@@ -228,6 +229,7 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 	s.Diagrams.MaxAssetBytes = max(cfg.DiagramMaxAssetMB, 1) << 20
 	s.Diagrams.Users = users
 	s.Diagrams.Blobs = st
+	s.Diagrams.ThumbJobs = jobs
 	s.Diagrams.Templates = postgres.NewDiagramTemplateRepo(db)
 	sender := webhooks.New(cfg.WebhookAllowPrivate, nil)
 	s.Diagrams.Hooks = application.NewWebhookDispatcher(diagramRepo, jobs, sender, sender.CheckURL)

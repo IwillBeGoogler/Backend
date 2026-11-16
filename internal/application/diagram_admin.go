@@ -445,7 +445,15 @@ func (d *Diagrams) PublicTemplates(ctx context.Context) ([]diagram.Template, err
 	if d.Templates == nil {
 		return nil, nil
 	}
-	return d.Templates.List(ctx, true)
+	ts, err := d.Templates.List(ctx, true)
+	var missing []string
+	for _, t := range ts {
+		if t.ThumbnailHash == nil {
+			missing = append(missing, t.FileID)
+		}
+	}
+	d.queueThumbnails(ctx, missing)
+	return ts, err
 }
 
 // ForkTemplate copies a published template into a new project of the
