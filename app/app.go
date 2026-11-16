@@ -260,6 +260,7 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 	h = middleware.Cache(rdb, h)
 	h = guardauth.WithPrincipal(h)
 	h = guardauth.AccessGate(g, ip, loc)(h)
+	h = guardauth.RejectAuthOutage(g)(h) // a session that could not be checked is a 503, not a sign-out
 	h = httpguard.Authenticate(g, gopts)(h)
 	guardActive := guardauth.UserActive(g)
 	tokenUserActive := func(ctx context.Context, id int) bool {

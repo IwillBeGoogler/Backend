@@ -14,10 +14,12 @@ import (
 
 	"github.com/bakhod1r/guard"
 	accessdomain "github.com/bakhod1r/guard/access/domain"
+	apikeydomain "github.com/bakhod1r/guard/apikey/domain"
 	"github.com/bakhod1r/guard/audit"
 	"github.com/bakhod1r/guard/httpguard"
 	identitydomain "github.com/bakhod1r/guard/identity/domain"
 	sessionapp "github.com/bakhod1r/guard/session/application"
+	sessiondomain "github.com/bakhod1r/guard/session/domain"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -74,6 +76,64 @@ type principalKey struct{}
 // WithPrincipal copies the principal httpguard.Authenticate attached to the
 // request into its context, so the application layer can authorize without
 // knowing about HTTP.
+// CredentialRejected reports whether Guard turned a credential down for good: unknown, expired or revoked, or its user is
+// gone or blocked. Anything else (Redis or Postgres unreachable, a shutdown closing the pools, a cancelled request) says
+// nothing about the credential, and must not be answered with 401: clients sign out on a 401 that a refresh cannot fix,
+// so a deploy or a Redis blip would log everyone out.
+func CredentialRejected(err error) bool {
+	for _, e := range []error{sessiondomain.ErrSessionNotFound, sessiondomain.ErrSessionExpired, apikeydomain.ErrKeyNotFound,
+		apikeydomain.ErrKeyInvalid, apikeydomain.ErrOwnerNotFound, identitydomain.ErrUserNotFound, identitydomain.ErrUserBlocked} {
+		if errors.Is(err, e) {
+			return true
+		}
+	}
+	return false
+}
+
+// authErr maps a Guard authentication error: a rejected credential is ErrUnauthorized (401), an outage stays an error (5xx).
+func authErr(err error) error {
+	if CredentialRejected(err) {
+		return domain.ErrUnauthorized
+	}
+	return fmt.Errorf("guard: authenticate: %w", err)
+}
+
+// RejectAuthOutage goes inside httpguard.Authenticate. That middleware treats every failure as "anonymous", so a request
+// whose session could not be checked (Redis down, the old container closing its pools during a deploy) would reach the
+// handler signed out and earn a 401. Here such a request is checked once more and, if it still fails for a reason other
+// than a bad credential, answered 503 with Retry-After: the client keeps its session and tries again.
+func RejectAuthOutage(g *guard.Guard) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if httpguard.PrincipalFrom(r) == nil && r.Context().Err() == nil {
+				if tok := bearerOrKey(r); tok != "" {
+					if _, err := g.Authenticate(r.Context(), tok); err != nil && !CredentialRejected(err) && r.Context().Err() == nil {
+						zap.L().Warn("auth unavailable", zap.Any("ctx", r.Context()), zap.Error(err))
+						w.Header().Set("Content-Type", "application/problem+json")
+						w.Header().Set("Retry-After", "2")
+						w.Header().Set("Cache-Control", "no-store")
+						w.WriteHeader(http.StatusServiceUnavailable)
+						_, _ = w.Write([]byte(`{"type":"about:blank","title":"Service Unavailable","status":503,"detail":"Sign-in could not be checked right now. Please retry.","code":"AUTH_UNAVAILABLE"}`))
+						return
+					}
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// bearerOrKey is the credential httpguard reads from headers (X-API-Key, then Authorization: Bearer).
+func bearerOrKey(r *http.Request) string {
+	if k := strings.TrimSpace(r.Header.Get("X-API-Key")); k != "" {
+		return k
+	}
+	if h := r.Header.Get("Authorization"); len(h) > 7 && strings.EqualFold(h[:7], "bearer ") {
+		return strings.TrimSpace(h[7:])
+	}
+	return ""
+}
+
 func WithPrincipal(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if p := httpguard.PrincipalFrom(r); p != nil {
@@ -183,7 +243,7 @@ func (i Identity) Login(ctx context.Context, email, password string, m applicati
 func (i Identity) Refresh(ctx context.Context, token string) (application.Credentials, error) {
 	s, tok, err := i.G.RotateSession(ctx, guard.SessionToken(token))
 	if err != nil {
-		return application.Credentials{}, domain.ErrUnauthorized
+		return application.Credentials{}, authErr(err)
 	}
 	return application.Credentials{Token: string(tok), ExpiresAt: s.ExpiresAt}, nil
 }
@@ -191,7 +251,7 @@ func (i Identity) Refresh(ctx context.Context, token string) (application.Creden
 func (i Identity) Logout(ctx context.Context, token string, m application.Meta) error {
 	p, err := i.G.Authenticate(ctx, token)
 	if err != nil {
-		return domain.ErrUnauthorized
+		return authErr(err)
 	}
 	return i.G.Logout(ctx, p, guard.RequestMeta{IP: m.IP, UserAgent: m.UserAgent})
 }
@@ -213,7 +273,7 @@ func (i Identity) revokeCredentials(ctx context.Context, userID int) error {
 func (i Identity) Authenticate(ctx context.Context, token string) (int, error) {
 	p, err := i.G.Authenticate(ctx, token)
 	if err != nil {
-		return 0, domain.ErrUnauthorized
+		return 0, authErr(err)
 	}
 	return strconv.Atoi(string(p.User.ID))
 }
@@ -281,7 +341,10 @@ func (i Identity) RevokeSession(ctx context.Context, userID int, sessionID strin
 
 func (i Identity) SessionID(ctx context.Context, token string) (string, error) {
 	p, err := i.G.Authenticate(ctx, token)
-	if err != nil || p.Session == nil {
+	if err != nil {
+		return "", authErr(err)
+	}
+	if p.Session == nil {
 		return "", domain.ErrUnauthorized
 	}
 	return string(p.Session.ID), nil
