@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/xml"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/bakhod1r/errorx"
@@ -119,13 +120,28 @@ func (h *Handler) writeRSS(w http.ResponseWriter, ch rssChannel, posts []post.Po
 	writeXML(w, "application/rss+xml; charset=utf-8", feed)
 }
 
-// sitemap lists published posts for search engines (up to 50,000).
+// sitemap lists the public pages for search engines: static routes, published
+// posts, their authors and tags, and public diagrams (each part up to 50,000).
 //
 // Auth: none.
 //
 // spector:tags feeds
 func (h *Handler) sitemap(w http.ResponseWriter, r *http.Request) {
-	set := urlSet{NS: "http://www.sitemaps.org/schemas/sitemap/0.9", URLs: []sitemapURL{{Loc: h.SiteURL + "/", LastMod: time.Now().UTC().Format("2006-01-02")}}}
+	today := time.Now().UTC().Format("2006-01-02")
+	set := urlSet{NS: "http://www.sitemaps.org/schemas/sitemap/0.9"}
+	seen := map[string]bool{}
+	add := func(loc, lastMod string) {
+		if seen[loc] || len(set.URLs) >= 50000 {
+			return
+		}
+		seen[loc] = true
+		set.URLs = append(set.URLs, sitemapURL{Loc: loc, LastMod: lastMod})
+	}
+	add(h.SiteURL+"/", today)
+	for _, path := range []string{"/topics", "/templates", "/d/gallery", "/about", "/contact", "/privacy", "/terms"} {
+		add(h.SiteURL+path, today)
+	}
+	authors, tags := map[string]string{}, map[string]string{}
 	for page := 1; page <= 1000; page++ {
 		res, err := h.Blog.ListPosts(r.Context(), post.Filter{Paging: domain.NewPaging(page, domain.MaxLimit)})
 		if err != nil {
@@ -133,10 +149,41 @@ func (h *Handler) sitemap(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, p := range res.Items {
-			set.URLs = append(set.URLs, sitemapURL{Loc: h.postURL(p), LastMod: p.UpdatedAt.UTC().Format("2006-01-02")})
+			mod := p.UpdatedAt.UTC().Format("2006-01-02")
+			add(h.postURL(p), mod)
+			if p.Author != "" && mod > authors[p.Author] {
+				authors[p.Author] = mod
+			}
+			for _, t := range p.Tags {
+				if mod > tags[t] {
+					tags[t] = mod
+				}
+			}
 		}
 		if page*res.Limit >= res.Total {
 			break
+		}
+	}
+	for name, mod := range authors {
+		add(h.SiteURL+"/@"+name, mod)
+	}
+	for tag, mod := range tags {
+		add(h.SiteURL+"/tag/"+url.PathEscape(tag), mod)
+	}
+	if h.Diagrams != nil {
+		for page := 1; page <= 1000; page++ {
+			res, err := h.Diagrams.PublicDiagrams(r.Context(), "", "", domain.NewPaging(page, domain.MaxLimit))
+			if err != nil {
+				break // diagrams are optional: keep the posts already listed
+			}
+			for _, l := range res.Items {
+				if l.Slug != "" {
+					add(h.SiteURL+PublicDiagramPath+l.Slug, l.UpdatedAt.UTC().Format("2006-01-02"))
+				}
+			}
+			if page*res.Limit >= res.Total {
+				break
+			}
 		}
 	}
 	writeXML(w, "application/xml; charset=utf-8", set)

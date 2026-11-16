@@ -218,6 +218,9 @@ func (h *Handler) prerender(w http.ResponseWriter, r *http.Request) {
 		m = pageMeta{Title: "Not found", Description: "This page does not exist.", URL: h.SiteURL + "/", Type: "website"}
 	}
 	m.Site = h.siteName()
+	if m.Image == "" {
+		m.Image = h.SiteURL + "/og-default.png"
+	}
 	if m.Title != m.Site && status == http.StatusOK {
 		m.Title += " — " + m.Site
 	}
