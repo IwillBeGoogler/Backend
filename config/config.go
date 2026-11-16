@@ -106,7 +106,8 @@ type Config struct {
 	// TurnstileVerifyURL overrides Cloudflare's siteverify endpoint (tests).
 	TurnstileVerifyURL string `env:"TURNSTILE_VERIFY_URL" desc:"siteverify endpoint override (tests only)"`
 
-	Analytics bool `env:"ANALYTICS" default:"true" desc:"record product analytics events (POST /api/events)"`
+	GAMeasurementID string `env:"GA_MEASUREMENT_ID" desc:"Google Analytics 4 measurement id (G-XXXXXXXXXX) sent to the client; empty disables Google Analytics"`
+	Analytics       bool   `env:"ANALYTICS" default:"true" desc:"record product analytics events (POST /api/events)"`
 
 	RequireVerifiedEmail bool `env:"REQUIRE_VERIFIED_EMAIL" default:"true" desc:"block posting, commenting and new publications until the email is confirmed"`
 

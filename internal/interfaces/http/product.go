@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -57,6 +58,8 @@ type publicConfig struct {
 	CaptchaSiteKey string `json:"captcha_site_key"`
 	// Analytics tells whether POST /api/events is recorded.
 	Analytics bool `json:"analytics"`
+	// GAMeasurementID is the Google Analytics 4 id; empty = no Google Analytics.
+	GAMeasurementID string `json:"ga_measurement_id"`
 	// SSO lists the enabled social login providers.
 	SSO ssoConfig `json:"sso"`
 }
@@ -77,7 +80,7 @@ type ssoConfig struct {
 // spector:tags ops
 func (h *Handler) publicConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	cfg := publicConfig{CaptchaSiteKey: h.CaptchaSiteKey, Analytics: h.Analytics != nil}
+	cfg := publicConfig{CaptchaSiteKey: h.CaptchaSiteKey, Analytics: h.Analytics != nil, GAMeasurementID: h.GAMeasurementID}
 	cfg.SSO = ssoConfig{Google: ssoProvider{h.Social["google"] != nil}, GitHub: ssoProvider{h.Social["github"] != nil}}
 	writeJSON(w, http.StatusOK, cfg)
 }
@@ -151,16 +154,24 @@ type pageMeta struct {
 	Body        template.HTML
 	JSONLD      template.JS
 	Feed        string
+	Lang        string // page language: en, uz or ru
+	Alternates  []altLink
 }
 
+// altLink is one hreflang alternate of a page.
+type altLink struct{ Lang, URL string }
+
 var prerenderTmpl = template.Must(template.New("page").Parse(`<!doctype html>
-<html>
+<html lang="{{.Lang}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}}</title>
 <meta name="description" content="{{.Description}}">
 <link rel="canonical" href="{{.URL}}">
+{{- range .Alternates}}
+<link rel="alternate" hreflang="{{.Lang}}" href="{{.URL}}">
+{{- end}}
 <meta property="og:site_name" content="{{.Site}}">
 <meta property="og:type" content="{{.Type}}">
 <meta property="og:title" content="{{.Title}}">
@@ -218,6 +229,7 @@ func (h *Handler) prerender(w http.ResponseWriter, r *http.Request) {
 		m = pageMeta{Title: "Not found", Description: "This page does not exist.", URL: h.SiteURL + "/", Type: "website"}
 	}
 	m.Site = h.siteName()
+	h.localize(&m, r.URL.Query().Get("lang"), status == http.StatusOK)
 	if m.Image == "" {
 		m.Image = h.SiteURL + "/og-default.png"
 	}
@@ -234,6 +246,28 @@ func (h *Handler) prerender(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Robots-Tag", "all")
 	w.WriteHeader(status)
 	_, _ = w.Write(buf.Bytes())
+}
+
+// siteLangs are the client's UI languages; a page is served in each as ?lang=xx.
+var siteLangs = []string{"uz", "ru", "en"}
+
+// localize sets the page language and, for pages on this site, the hreflang
+// alternates (one URL per language plus x-default) so Google can pair them.
+// A language variant is its own canonical URL.
+func (h *Handler) localize(m *pageMeta, lang string, ok bool) {
+	m.Lang = "en"
+	if !ok || !strings.HasPrefix(m.URL, h.SiteURL) || strings.Contains(m.URL, "?") {
+		return
+	}
+	base := m.URL
+	m.Alternates = append(m.Alternates, altLink{"x-default", base})
+	for _, l := range siteLangs {
+		m.Alternates = append(m.Alternates, altLink{l, base + "?lang=" + l})
+	}
+	if slices.Contains(siteLangs, lang) {
+		m.Lang = lang
+		m.URL = base + "?lang=" + lang
+	}
 }
 
 func (h *Handler) siteName() string {
