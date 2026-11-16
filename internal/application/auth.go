@@ -311,6 +311,9 @@ func (a *Accounts) DeleteAccount(ctx context.Context, actor user.User, password 
 	if err := a.identity.LogoutAll(ctx, actor.ID); err != nil {
 		return time.Time{}, err
 	}
+	if a.Realtime != nil {
+		a.Realtime.AccountBlocked(ctx, actor.ID) // cut live MQTT/diagram sessions too
+	}
 	purgeAt := now.Add(user.DeletionGrace)
 	if err := a.blog.Jobs.PurgeAccountAt(ctx, actor.ID, purgeAt); err != nil {
 		zap.L().Error("schedule purge", zap.Any("ctx", ctx), zap.Int("user", actor.ID), zap.Error(err))

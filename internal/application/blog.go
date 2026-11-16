@@ -505,10 +505,11 @@ type AuthorStats struct {
 	Page   int               `json:"page"`
 	Limit  int               `json:"limit"`
 	Totals struct {
-		Views    int64 `json:"views"`
-		Claps    int   `json:"claps"`
-		Comments int   `json:"comments"`
-		Reads    int   `json:"reads"`
+		Views       int64 `json:"views"`
+		Claps       int   `json:"claps"`
+		Comments    int   `json:"comments"`
+		Reads       int   `json:"reads"`
+		ReadSeconds int64 `json:"read_seconds"`
 	} `json:"totals"` // over this page
 }
 
@@ -544,6 +545,7 @@ func (b *Blog) MyStats(ctx context.Context, actor user.User, p domain.Paging) (A
 		out.Totals.Claps += s.Claps
 		out.Totals.Comments += s.Comments
 		out.Totals.Reads += s.Reads
+		out.Totals.ReadSeconds += s.ReadSeconds
 		if s.Views > 0 {
 			s.ReadRatio = min(1, float64(s.Reads)/float64(s.Views))
 		}

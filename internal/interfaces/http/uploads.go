@@ -151,7 +151,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 // spector:tags uploads
 func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
-	if key == "" || strings.Contains(key, "..") {
+	if key == "" || strings.Contains(key, "..") || strings.HasPrefix(key, "diagram/") {
 		writeError(w, r, http.StatusNotFound, "not found")
 		return
 	}
@@ -168,6 +168,7 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", obj.ContentType)
 	w.Header().Set("Content-Length", strconv.FormatInt(obj.Size, 10))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	if _, err := io.Copy(w, obj.Body); err != nil {
 		zap.L().Debug("download aborted", zap.String("key", key), zap.Error(err))

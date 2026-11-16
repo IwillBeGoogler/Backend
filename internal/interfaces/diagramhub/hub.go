@@ -320,12 +320,28 @@ func (h *Hub) Close() {
 		rooms = append(rooms, r)
 	}
 	h.mu.Unlock()
+	h.drain(5 * time.Second)
 	h.cancel()
 	h.wg.Wait()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	for _, r := range rooms {
 		h.flush(ctx, r)
+	}
+}
+
+// drain gives the workers up to d to empty their queues, so edits already received are applied before the final flush.
+func (h *Hub) drain(d time.Duration) {
+	deadline := time.Now().Add(d)
+	for time.Now().Before(deadline) {
+		queued := 0
+		for _, ch := range h.jobs {
+			queued += len(ch)
+		}
+		if queued == 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

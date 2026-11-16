@@ -113,7 +113,12 @@ func run() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if metrics != nil {
-		defer metrics.Shutdown(shutdownCtx)
+		// its own budget: a slow HTTP drain must not starve the telemetry flush
+		defer func() {
+			mctx, mcancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer mcancel()
+			metrics.Shutdown(mctx)
+		}()
 	}
 	if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		if !errors.Is(err, context.DeadlineExceeded) {

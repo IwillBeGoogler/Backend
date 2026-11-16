@@ -19,6 +19,10 @@ func (r *fatPosts) Read(context.Context, int, int, string) (bool, error) { retur
 func (r *fatPosts) DailyReads(context.Context, int, time.Time) (map[string]int, error) {
 	return map[string]int{"2026-10-05": 2}, r.err
 }
+func (r *fatPosts) AuthorDailyReads(context.Context, int, time.Time) (map[string]int, error) {
+	return map[string]int{"2026-10-05": 3}, r.err
+}
+func (r *fatPosts) AuthorPostIDs(context.Context, int) ([]int, error) { return []int{1, 2}, r.err }
 
 func (s *fatSocial) CountHidden(context.Context, int) (int, error) { return s.hidden, s.err }
 func (s *fatSocial) Hide(context.Context, int, social.HideKind, string) error {
@@ -110,6 +114,23 @@ func TestBlogReadsAndDailyStats(t *testing.T) {
 	w.p.err = errBoom
 	if _, err := w.b.DailyStats(ctx, ali, 1, 3); err == nil {
 		t.Error("reads err")
+	}
+}
+
+func TestBlogAuthorDailyStats(t *testing.T) {
+	w := newFat(1, "post.update")
+	days, err := w.b.AuthorDailyStats(ctx, ali, 100)
+	if err != nil || len(days) != maxStatDays {
+		t.Fatalf("%d %v", len(days), err)
+	}
+	w.b.Views = fatViews{dailyErr: errBoom}
+	if _, err := w.b.AuthorDailyStats(ctx, ali, 3); err == nil {
+		t.Error("views err")
+	}
+	w.b.Views = fatViews{}
+	w.p.err = errBoom
+	if _, err := w.b.AuthorDailyStats(ctx, ali, 3); err == nil {
+		t.Error("ids err")
 	}
 }
 

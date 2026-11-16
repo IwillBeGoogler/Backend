@@ -109,20 +109,21 @@ func (r *PostRepo) List(ctx context.Context, f post.Filter) (post.Page, error) {
 	if f.PublicationID != 0 {
 		where = append(where, "p.publication_id = "+arg(f.PublicationID))
 	}
-	if after != nil {
-		where = append(where, "(COALESCE(p.published_at, p.publish_at, p.updated_at), p.id) < ("+
-			arg(*after)+"::timestamptz, "+arg(afterID)+")")
-	}
 	if f.InList != 0 {
 		where = append(where, "EXISTS (SELECT 1 FROM list_items WHERE post_id = p.id AND list_id = "+arg(f.InList)+")")
 	}
 	if f.HideFor != 0 {
 		where = append(where, notHidden(arg(f.HideFor)))
 	}
-	sql := `SELECT ` + postCols + `, count(*) OVER () FROM posts p
-		WHERE ` + strings.Join(where, "\n\t\t  AND ") + `
+	// The window counts the whole list; the cursor filters afterwards, so meta.total does not shrink page by page.
+	cursor := ""
+	if after != nil {
+		cursor = "WHERE (COALESCE(p.published_at, p.publish_at, p.updated_at), p.id) < (" + arg(*after) + "::timestamptz, " + arg(afterID) + ")"
+	}
+	sql := `SELECT ` + postCols + `, total FROM (SELECT p.*, count(*) OVER () AS total FROM posts p
+		WHERE ` + strings.Join(where, "\n\t\t  AND ") + `) p ` + cursor + `
 		ORDER BY ` + order + `
-		LIMIT ` + arg(f.Limit) + ` OFFSET ` + arg(offset)
+		LIMIT ` + arg(f.Limit+1) + ` OFFSET ` + arg(offset) // one extra row tells whether a next page exists
 	rows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return page, err
@@ -138,8 +139,11 @@ func (r *PostRepo) List(ctx context.Context, f post.Filter) (post.Page, error) {
 	if err := rows.Err(); err != nil {
 		return page, err
 	}
-	if f.Query == "" && len(page.Items) == f.Limit && offset+f.Limit < page.Total {
-		page.NextCursor = post.CursorAfter(page.Items[len(page.Items)-1])
+	if len(page.Items) > f.Limit {
+		page.Items = page.Items[:f.Limit]
+		if f.Query == "" {
+			page.NextCursor = post.CursorAfter(page.Items[f.Limit-1])
+		}
 	}
 	return page, nil
 }
@@ -191,7 +195,7 @@ func (r *PostRepo) Create(ctx context.Context, d post.Draft, authorID int, autho
 	err := pgx.BeginFunc(ctx, r.db, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `INSERT INTO posts (title, subtitle, slug, status, publish_at, body, reading_time,
 				published_at, author, category_id, user_id, cover_url, tags, publication_id, canonical_url, glossary)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $4 = 'published' THEN now() END,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $4 IN ('published', 'unlisted') THEN now() END,
 				$8, NULLIF($9, 0), NULLIF($10, 0), $11, $12, NULLIF($13, 0), $14, $15) RETURNING id`,
 			d.Title, d.Subtitle, post.NewSlug(d.Title), d.Status, d.PublishAt, d.Body, post.ReadingTime(d.Body),
 			author, d.CategoryID, authorID, d.CoverURL, d.Tags, d.PublicationID, d.CanonicalURL, glossaryJSON(d.Glossary)).Scan(&id)
@@ -264,7 +268,7 @@ func updatePost(ctx context.Context, tx pgx.Tx, id int, d post.Draft) error {
 		SET title = $2, body = $3, category_id = NULLIF($4, 0), cover_url = $5, tags = $6,
 			subtitle = $7, status = $8, reading_time = $9, publish_at = $10, publication_id = NULLIF($11, 0),
 			canonical_url = $12, glossary = $13, updated_at = now(),
-			published_at = CASE WHEN $8 = 'published' THEN COALESCE(published_at, now()) END
+			published_at = CASE WHEN $8 IN ('published', 'unlisted') THEN COALESCE(published_at, now()) END
 		WHERE id = $1`,
 		id, d.Title, d.Body, d.CategoryID, d.CoverURL, d.Tags, d.Subtitle, d.Status, post.ReadingTime(d.Body), d.PublishAt, d.PublicationID,
 		d.CanonicalURL, glossaryJSON(d.Glossary))
@@ -476,6 +480,7 @@ func (r *PostRepo) AuthorStats(ctx context.Context, userID int, pg domain.Paging
 			(SELECT count(*) FROM bookmarks WHERE post_id = p.id),
 			(SELECT count(*) FROM highlights WHERE post_id = p.id),
 			(SELECT count(*) FROM post_reads WHERE post_id = p.id),
+			p.read_seconds, p.read_sessions,
 			count(*) OVER ()
 		FROM posts p WHERE p.user_id = $1
 		ORDER BY COALESCE(p.published_at, p.updated_at) DESC, p.id DESC LIMIT $2 OFFSET $3`,
@@ -487,10 +492,12 @@ func (r *PostRepo) AuthorStats(ctx context.Context, userID int, pg domain.Paging
 	stats, total := []post.AuthorStat{}, 0
 	for rows.Next() {
 		var s post.AuthorStat
+		var sessions int
 		if err := rows.Scan(&s.PostID, &s.Title, &s.Slug, &s.Status, &s.PublishedAt, &s.Likes, &s.Claps,
-			&s.Comments, &s.Bookmarks, &s.Highlights, &s.Reads, &total); err != nil {
+			&s.Comments, &s.Bookmarks, &s.Highlights, &s.Reads, &s.ReadSeconds, &sessions, &total); err != nil {
 			return nil, 0, err
 		}
+		s.SetSessions(sessions)
 		stats = append(stats, s)
 	}
 	return stats, total, rows.Err()
@@ -505,9 +512,26 @@ func (r *PostRepo) Read(ctx context.Context, postID, userID int, reader string) 
 	return tag.RowsAffected() > 0, err
 }
 
+func (r *PostRepo) AuthorDailyReads(ctx context.Context, userID int, since time.Time) (map[string]int, error) {
+	return r.dayCounts(ctx, `SELECT to_char(pr.read_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), count(*) FROM post_reads pr
+		JOIN posts p ON p.id = pr.post_id WHERE p.user_id = $1 AND pr.read_at >= $2 GROUP BY 1`, userID, since)
+}
+
+func (r *PostRepo) AuthorPostIDs(ctx context.Context, userID int) ([]int, error) {
+	rows, err := r.db.Query(ctx, `SELECT id FROM posts WHERE user_id = $1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[int])
+}
+
 func (r *PostRepo) DailyReads(ctx context.Context, postID int, since time.Time) (map[string]int, error) {
-	rows, err := r.db.Query(ctx, `SELECT to_char(read_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), count(*) FROM post_reads
+	return r.dayCounts(ctx, `SELECT to_char(read_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), count(*) FROM post_reads
 		WHERE post_id = $1 AND read_at >= $2 GROUP BY 1`, postID, since)
+}
+
+func (r *PostRepo) dayCounts(ctx context.Context, q string, id int, since time.Time) (map[string]int, error) {
+	rows, err := r.db.Query(ctx, q, id, since)
 	if err != nil {
 		return nil, err
 	}

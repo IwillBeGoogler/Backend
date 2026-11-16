@@ -82,8 +82,8 @@ func (r *UserRepo) Profile(ctx context.Context, username string, viewerID int) (
 	err := r.db.QueryRow(ctx, `SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.created_at,
 			(SELECT count(*) FROM posts WHERE user_id = u.id AND status = 'published'),
 			(SELECT COALESCE(sum(likes), 0) FROM posts WHERE user_id = u.id),
-			(SELECT count(*) FROM follows WHERE followee_id = u.id),
-			(SELECT count(*) FROM follows WHERE follower_id = u.id),
+			(SELECT count(*) FROM follows f JOIN users x ON x.id = f.follower_id WHERE f.followee_id = u.id AND x.deleted_at IS NULL),
+			(SELECT count(*) FROM follows f JOIN users x ON x.id = f.followee_id WHERE f.follower_id = u.id AND x.deleted_at IS NULL),
 			EXISTS (SELECT 1 FROM follows WHERE follower_id = $2 AND followee_id = u.id),
 			EXISTS (SELECT 1 FROM email_subscriptions WHERE subscriber_id = $2 AND author_id = u.id),
 			COALESCE((SELECT id FROM posts WHERE id = u.pinned_post_id AND status = 'published'), 0)
@@ -134,27 +134,33 @@ func (r *UserRepo) summaries(ctx context.Context, where, col string, id int, p d
 		at := time.UnixMicro(c[0]).UTC()
 		after, afterID, offset, page.Page = &at, c[1], 0, 0
 	}
-	rows, err := r.db.Query(ctx, `SELECT u.id, u.username, u.display_name, u.avatar_url, f.created_at, count(*) OVER ()
-		FROM follows f JOIN users u ON u.id = `+col+` WHERE `+where+` AND u.deleted_at IS NULL
-		  AND ($4::timestamptz IS NULL OR (f.created_at, u.id) < ($4, $5))
-		ORDER BY f.created_at DESC, u.id DESC LIMIT $2 OFFSET $3`, id, p.Limit, offset, after, afterID)
+	// total counts the whole list; the cursor filters afterwards (and one extra row says whether a next page exists)
+	rows, err := r.db.Query(ctx, `SELECT id, username, display_name, avatar_url, at, total FROM (
+			SELECT u.id, u.username, u.display_name, u.avatar_url, f.created_at AS at, count(*) OVER () AS total
+			FROM follows f JOIN users u ON u.id = `+col+` WHERE `+where+` AND u.deleted_at IS NULL) s
+		WHERE ($4::timestamptz IS NULL OR (at, id) < ($4, $5))
+		ORDER BY at DESC, id DESC LIMIT $2 OFFSET $3`, id, p.Limit+1, offset, after, afterID)
 	if err != nil {
 		return page, err
 	}
 	defer rows.Close()
-	var lastAt time.Time
+	var lastAt, keptAt time.Time
 	for rows.Next() {
 		var s user.Summary
 		if err := rows.Scan(&s.ID, &s.Username, &s.DisplayName, &s.AvatarURL, &lastAt, &page.Total); err != nil {
 			return page, err
 		}
 		page.Items = append(page.Items, s)
+		if len(page.Items) <= p.Limit {
+			keptAt = lastAt
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return page, err
 	}
-	if n := len(page.Items); n == p.Limit && offset+n < page.Total {
-		page.NextCursor = domain.EncodeCursor(lastAt.UnixMicro(), int64(page.Items[n-1].ID))
+	if len(page.Items) > p.Limit {
+		page.Items = page.Items[:p.Limit]
+		page.NextCursor = domain.EncodeCursor(keptAt.UnixMicro(), int64(page.Items[p.Limit-1].ID))
 	}
 	return page, nil
 }
@@ -195,6 +201,19 @@ func (r *UserRepo) Purge(ctx context.Context, id int, cutoff time.Time) (bool, e
 			return ignoreNoRows(err)
 		}
 		for _, q := range []string{
+			// a publication this user alone owned must not be left without an owner: the longest-standing
+			// other member takes over, and one nobody else belongs to goes with its owner
+			`UPDATE publication_members pm SET role = 'owner'
+			   WHERE (pm.publication_id, pm.user_id) IN (
+			     SELECT DISTINCT ON (m.publication_id) m.publication_id, m.user_id
+			       FROM publication_members m
+			      WHERE m.user_id <> $1 AND m.publication_id IN (
+			            SELECT publication_id FROM publication_members WHERE user_id = $1 AND role = 'owner')
+			        AND NOT EXISTS (SELECT 1 FROM publication_members o
+			                         WHERE o.publication_id = m.publication_id AND o.role = 'owner' AND o.user_id <> $1)
+			      ORDER BY m.publication_id, (m.role = 'editor') DESC, m.created_at, m.user_id)`,
+			`DELETE FROM publications p WHERE EXISTS (SELECT 1 FROM publication_members WHERE publication_id = p.id AND user_id = $1)
+			   AND NOT EXISTS (SELECT 1 FROM publication_members WHERE publication_id = p.id AND user_id <> $1)`,
 			`DELETE FROM comments WHERE user_id = $1`,
 			`DELETE FROM posts WHERE user_id = $1`,
 			`DELETE FROM users WHERE id = $1`,

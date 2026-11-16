@@ -19,6 +19,10 @@ func (r *AnalyticsRepo) Insert(ctx context.Context, e application.AnalyticsEvent
 	_, err := r.db.Exec(ctx, `INSERT INTO analytics_events (name, visitor, user_id, path, post_id, value, lang, referrer)
 		VALUES ($1, $2, (SELECT id FROM users WHERE id = $3), $4, (SELECT id FROM posts WHERE id = $5), $6, $7, $8)`,
 		e.Name, e.Visitor, e.UserID, e.Path, e.PostID, e.Value, e.Lang, e.Referrer)
+	if err == nil && e.Name == application.EventReadTime && e.PostID > 0 {
+		_, err = r.db.Exec(ctx, `UPDATE posts SET read_seconds = read_seconds + $2, read_sessions = read_sessions + 1
+			WHERE id = $1`, e.PostID, int64(e.Value))
+	}
 	return err
 }
 

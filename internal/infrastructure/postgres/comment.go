@@ -37,9 +37,10 @@ func (r *CommentRepo) page(ctx context.Context, where string, arg any, viewerID 
 	}
 	rows, err := r.db.Query(ctx, `SELECT `+commentCols+`,
 			EXISTS (SELECT 1 FROM comment_likes WHERE comment_id = comments.id AND user_id = $5),
-			count(*) OVER ()
-		FROM comments WHERE `+where+` AND ($4 = 0 OR id `+cmp+` $4)
-		ORDER BY `+order+` LIMIT $2 OFFSET $3`, arg, p.Limit, offset, after, viewerID)
+			total
+		FROM (SELECT *, count(*) OVER () AS total FROM comments WHERE `+where+`) comments
+		WHERE ($4 = 0 OR id `+cmp+` $4)
+		ORDER BY `+order+` LIMIT $2 OFFSET $3`, arg, p.Limit+1, offset, after, viewerID) // one extra row: is there a next page? total counts the whole list, not what follows the cursor
 	if err != nil {
 		return page, err
 	}
@@ -55,8 +56,9 @@ func (r *CommentRepo) page(ctx context.Context, where string, arg any, viewerID 
 	if err := rows.Err(); err != nil {
 		return page, err
 	}
-	if n := len(page.Items); n == p.Limit && offset+n < page.Total {
-		page.NextCursor = domain.EncodeCursor(int64(page.Items[n-1].ID))
+	if len(page.Items) > p.Limit {
+		page.Items = page.Items[:p.Limit]
+		page.NextCursor = domain.EncodeCursor(int64(page.Items[p.Limit-1].ID))
 	}
 	return page, nil
 }

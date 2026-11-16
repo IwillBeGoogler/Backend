@@ -65,7 +65,14 @@ func (s *pgStore) CreateUser(ctx context.Context, u newUser) (int, error) {
 	}
 	if u.PasswordHash != "" {
 		if _, err := s.db.Exec(ctx, `UPDATE guard_account SET secret = $2 WHERE user_id = $1`, created.ID, u.PasswordHash); err != nil {
-			return created.ID, fmt.Errorf("keep old password: %w", err)
+			// no half-made user: they could neither sign in with the old password nor be created again
+			_ = s.users.Delete(ctx, created.ID)
+			return 0, fmt.Errorf("keep old password: %w", err)
+		}
+	}
+	if name := strings.TrimSpace(u.Name); name != "" {
+		if _, err := s.db.Exec(ctx, `UPDATE users SET display_name = $2 WHERE id = $1`, created.ID, name); err != nil {
+			return created.ID, fmt.Errorf("display name: %w", err)
 		}
 	}
 	return created.ID, nil

@@ -935,6 +935,10 @@ func (d *Diagrams) commit(ctx context.Context, w writer, cur diagram.Doc, expect
 	if err != nil {
 		return cur, err
 	}
+	if cur.Version != expected {
+		// a stale save must not touch the private store either (the CAS below would refuse it anyway)
+		return cur, diagram.VersionConflict(cur.Version, cur.Restored)
+	}
 	if err := d.filePrivate(ctx, cur.ID, priv, now); err != nil {
 		return cur, err
 	}

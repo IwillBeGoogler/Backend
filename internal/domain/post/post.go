@@ -74,6 +74,9 @@ func (p Post) Draft() Draft {
 		Body: p.Body, CategoryID: p.CategoryID, CategoryIDs: p.CategoryIDs, PublicationID: p.PublicationID,
 		CoverURL: p.CoverURL, CanonicalURL: p.CanonicalURL, Tags: p.Tags, Glossary: p.Glossary,
 	}
+	if len(p.CategoryIDs) > 0 {
+		d.CategoryID = 0 // CategoryIDs holds the full list: a stale primary would be merged back in by Normalize
+	}
 	for _, l := range p.Labels {
 		d.LabelIDs = append(d.LabelIDs, l.ID)
 	}
@@ -426,7 +429,16 @@ type AuthorStat struct {
 	Bookmarks   int        `json:"bookmarks"`
 	Highlights  int        `json:"highlights"`
 	Reads       int        `json:"reads"`
-	ReadRatio   float64    `json:"read_ratio"` // reads / views
+	ReadRatio   float64    `json:"read_ratio"`       // reads / views
+	ReadSeconds int64      `json:"read_seconds"`     // all-time reading time
+	AvgReadSecs float64    `json:"avg_read_seconds"` // per reading session
+}
+
+// SetSessions fills AvgReadSecs from the session count.
+func (s *AuthorStat) SetSessions(n int) {
+	if n > 0 {
+		s.AvgReadSecs = float64(s.ReadSeconds) / float64(n)
+	}
 }
 
 // DailyStat is one day of a post's views and reads.
@@ -482,6 +494,10 @@ type Repository interface {
 	Read(ctx context.Context, postID, userID int, reader string) (bool, error)
 	// DailyReads counts reads per UTC day (YYYY-MM-DD) since since.
 	DailyReads(ctx context.Context, postID int, since time.Time) (map[string]int, error)
+	// AuthorDailyReads counts reads of the author's posts per UTC day since since.
+	AuthorDailyReads(ctx context.Context, userID int, since time.Time) (map[string]int, error)
+	// AuthorPostIDs lists every post id of the author.
+	AuthorPostIDs(ctx context.Context, userID int) ([]int, error)
 	// AuthorStats lists userID's posts, newest first; Views is left zero.
 	AuthorStats(ctx context.Context, userID int, p domain.Paging) ([]AuthorStat, int, error)
 	Tags(ctx context.Context) ([]TagCount, error)

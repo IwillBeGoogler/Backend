@@ -23,13 +23,15 @@ func (r *SiteStatsRepo) Counts(ctx context.Context) (application.SiteCounts, err
 		(SELECT count(*) FROM dg_files f JOIN dg_projects p ON p.id = f.project_id
 			JOIN users u ON u.id = p.owner_id WHERE f.visibility = 'public' AND u.deleted_at IS NULL),
 		(SELECT count(*) FROM users WHERE deleted_at IS NULL),
-		(SELECT count(DISTINCT `+who+`) FROM analytics_events WHERE name = 'page_view')`).
-		Scan(&c.Posts, &c.Diagrams, &c.Users, &c.Visitors)
+		(SELECT count(DISTINCT `+who+`) FROM analytics_events WHERE name = 'page_view'),
+		(SELECT COALESCE(sum(p.read_seconds), 0) FROM posts p JOIN users u ON u.id = p.user_id
+			WHERE p.status = 'published' AND u.deleted_at IS NULL)`).
+		Scan(&c.Posts, &c.Diagrams, &c.Users, &c.Visitors, &c.ReadSeconds)
 	return c, err
 }
 
 func (r *SiteStatsRepo) PublicPosts(ctx context.Context) ([]application.PostRef, error) {
-	rows, err := r.db.Query(ctx, `SELECT p.id, p.slug, p.title, u.username
+	rows, err := r.db.Query(ctx, `SELECT p.id, p.slug, p.title, u.username, p.read_seconds, p.read_sessions
 		FROM posts p JOIN users u ON u.id = p.user_id
 		WHERE p.status = 'published' AND u.deleted_at IS NULL`)
 	if err != nil {
@@ -37,7 +39,7 @@ func (r *SiteStatsRepo) PublicPosts(ctx context.Context) ([]application.PostRef,
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (application.PostRef, error) {
 		var p application.PostRef
-		err := row.Scan(&p.ID, &p.Slug, &p.Title, &p.Author)
+		err := row.Scan(&p.ID, &p.Slug, &p.Title, &p.Author, &p.ReadSeconds, &p.ReadSessions)
 		return p, err
 	})
 }

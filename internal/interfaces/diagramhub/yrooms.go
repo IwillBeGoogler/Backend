@@ -458,6 +458,9 @@ func (h *Hub) handleAwareness(ctx context.Context, t topic.Topic, frame []byte) 
 		if old, ok := r.aw[e.Client]; ok && e.Clock < old.Clock {
 			continue // stale
 		}
+		if _, mine := r.byOwner[t.ClientID][e.Client]; !mine && len(r.byOwner[t.ClientID]) >= maxAwarenessPerClient {
+			continue // one MQTT client may not mint awareness ids without end
+		}
 		r.owner[e.Client] = t.ClientID
 		if r.byOwner[t.ClientID] == nil {
 			r.byOwner[t.ClientID] = map[uint64]struct{}{}
@@ -471,6 +474,9 @@ func (h *Hub) handleAwareness(ctx context.Context, t topic.Topic, frame []byte) 
 		h.publishAwareness(ctx, t.FileID, yjs.EncodeAwareness(keep), t.ClientID)
 	}
 }
+
+// maxAwarenessPerClient caps the awareness ids (cursors) one MQTT client may own in a room.
+const maxAwarenessPerClient = 100
 
 func (h *Hub) publishAwareness(ctx context.Context, fileID string, update []byte, origin string) {
 	h.publish(ctx, application.Message{Topic: topic.AwarenessOutTopic(fileID), Payload: yjs.Awareness(update), QoS: 0, Origin: origin})

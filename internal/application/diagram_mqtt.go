@@ -101,7 +101,8 @@ type MQTTAccess struct {
 	cache map[aclKey]aclEntry
 	// gen counts the cuts of each client, so a lookup that began before a cut
 	// does not store its (stale) answer after it.
-	gen map[string]uint64
+	gen   map[string]uint64
+	epoch uint64 // bumped when gen is reset, so an in-flight answer cannot match a recycled counter
 }
 
 type aclKey struct{ client, scope, id string }
@@ -129,7 +130,7 @@ type MQTTAuth struct {
 
 // Authenticate decides a CONNECT. A bad ticket or token is a plain deny.
 func (m *MQTTAccess) Authenticate(ctx context.Context, clientID, username, password string) MQTTAuth {
-	if m.ServerUser != "" && eq(username, m.ServerUser) && eq(password, m.ServerPassword) {
+	if m.ServerUser != "" && m.ServerPassword != "" && eq(username, m.ServerUser) && eq(password, m.ServerPassword) {
 		return MQTTAuth{Allow: true, Superuser: true}
 	}
 	user, ok := topic.ParseClientID(clientID)
@@ -257,7 +258,7 @@ func (m *MQTTAccess) channel(ctx context.Context, clientID string, user int, sco
 		return e.a, e.err
 	}
 	m.mu.Lock()
-	gen := m.gen[clientID]
+	gen, epoch := m.gen[clientID], m.epoch
 	m.mu.Unlock()
 	token := ""
 	if user == 0 {
@@ -278,7 +279,7 @@ func (m *MQTTAccess) channel(ctx context.Context, clientID string, user int, sco
 	if m.cache == nil || len(m.cache) >= maxACLCache {
 		m.cache = map[aclKey]aclEntry{}
 	}
-	if m.gen[clientID] == gen {
+	if m.gen[clientID] == gen && m.epoch == epoch {
 		m.cache[k] = aclEntry{a, err, now}
 	}
 	m.mu.Unlock()
@@ -374,6 +375,7 @@ func (m *MQTTAccess) DropClients(ids []string) {
 	}
 	if m.gen == nil || len(m.gen) >= maxACLCache {
 		m.gen = map[string]uint64{}
+		m.epoch++
 	}
 	for _, id := range ids {
 		m.gen[id]++

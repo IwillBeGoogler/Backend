@@ -20,6 +20,7 @@ import (
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/netguard"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/net/html"
 )
@@ -71,27 +72,7 @@ func New(allowPrivate bool) *Importer {
 }
 
 // public reports whether ip is a routable internet address.
-func public(ip netip.Addr) bool {
-	ip = ip.Unmap()
-	if !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
-		return false
-	}
-	for _, p := range blocked {
-		if p.Contains(ip) {
-			return false
-		}
-	}
-	return true
-}
-
-var blocked = []netip.Prefix{
-	netip.MustParsePrefix("0.0.0.0/8"),
-	netip.MustParsePrefix("100.64.0.0/10"), // carrier-grade NAT
-	netip.MustParsePrefix("192.0.0.0/24"),
-	netip.MustParsePrefix("198.18.0.0/15"),
-	netip.MustParsePrefix("240.0.0.0/4"),
-	netip.MustParsePrefix("64:ff9b::/96"), // NAT64 can reach IPv4 private ranges
-}
+func public(ip netip.Addr) bool { return !netguard.Private(ip) }
 
 func (im *Importer) Fetch(ctx context.Context, raw string) (application.Imported, error) {
 	u, err := url.Parse(raw)

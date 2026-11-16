@@ -91,7 +91,7 @@ func TestTrustedProxyPrefixes(t *testing.T) {
 
 func TestAllowedOrigins(t *testing.T) {
 	c := Config{Env: "dev", SiteURL: "https://blog.example/"}
-	if got := c.AllowedOrigins(); !slices.Equal(got, []string{"https://blog.example", "http://localhost:8082"}) {
+	if got := c.AllowedOrigins(); !slices.Equal(got, []string{"https://blog.example", "http://localhost:8082", "http://localhost:3100", "http://localhost:5174"}) {
 		t.Errorf("dev default origins = %v", got)
 	}
 	c.Env = "production"

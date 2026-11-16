@@ -143,7 +143,21 @@ func sessionOnly(path string) bool {
 	if strings.HasPrefix(path, "/api/diagrams/files/") && strings.HasSuffix(path, "/publish") {
 		return false // publish/unpublish changes embeds in cached public posts
 	}
-	return strings.HasPrefix(path, "/api/auth/") || strings.HasPrefix(path, "/api/guard/") || strings.HasPrefix(path, "/api/diagrams/")
+	for _, p := range sessionOnlyPrefixes {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// sessionOnlyPrefixes also lists write endpoints that only record analytics,
+// broker auth or per-user state, so a page view never flushes the cache.
+var sessionOnlyPrefixes = []string{
+	"/api/auth/", "/api/guard/", "/api/diagrams/",
+	"/api/events", "/api/internal/", "/api/client-errors", "/api/feedback",
+	"/api/reports", "/api/unsubscribe",
+	"/api/me/stream-ticket", "/api/me/notifications/read", "/api/me/hidden",
 }
 
 // cacheKeyURI is the path plus the query in canonical (sorted) order, so

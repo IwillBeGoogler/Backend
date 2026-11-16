@@ -92,7 +92,10 @@ func (h *Handler) notificationStream(w http.ResponseWriter, r *http.Request) {
 	if id == 0 && h.Tickets != nil {
 		if t := r.URL.Query().Get("ticket"); t != "" {
 			if uid, err := h.Tickets.Consume(r.Context(), t); err == nil {
-				id = uid
+				// a ticket outlives a deletion: the account must still exist
+				if _, err := h.Accounts.User(r.Context(), uid); err == nil {
+					id = uid
+				}
 			}
 		}
 	}

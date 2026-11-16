@@ -80,6 +80,44 @@ func (b *Blog) DailyStats(ctx context.Context, actor user.User, postID, days int
 	return out, nil
 }
 
+// AuthorDailyStats is views and reads per day summed over all the actor's
+// posts, oldest first.
+func (b *Blog) AuthorDailyStats(ctx context.Context, actor user.User, days int) ([]post.DailyStat, error) {
+	ctx, span := tracer.Start(ctx, "Blog.AuthorDailyStats")
+	defer span.End()
+	days = min(max(days, 1), maxStatDays)
+	today := b.now().UTC().Truncate(24 * time.Hour)
+	dates := make([]time.Time, days)
+	for i := range dates {
+		dates[i] = today.AddDate(0, 0, i-days+1)
+	}
+	ids, err := b.Posts.AuthorPostIDs(ctx, actor.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]post.DailyStat, days)
+	for i, d := range dates {
+		out[i].Date = d.Format("2006-01-02")
+	}
+	for _, id := range ids {
+		views, err := b.Views.Daily(ctx, id, dates)
+		if err != nil {
+			return nil, err
+		}
+		for i := range out {
+			out[i].Views += views[i]
+		}
+	}
+	reads, err := b.Posts.AuthorDailyReads(ctx, actor.ID, dates[0])
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Reads = reads[out[i].Date]
+	}
+	return out, nil
+}
+
 // For You
 
 // ForYou is the actor's ranked home feed (see Discovery.ForYou).

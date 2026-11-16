@@ -81,6 +81,24 @@ func (h *Handler) postDailyStats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// authorDailyStats returns views and reads per day over all the caller's
+// posts, oldest first.
+//
+// ?days= 1-30 (default 30).
+// Auth: user.
+//
+// spector:tags me
+func (h *Handler) authorDailyStats(w http.ResponseWriter, r *http.Request) {
+	if actor, ok := h.requireUser(w, r); ok {
+		days, err := strconv.Atoi(r.URL.Query().Get("days"))
+		if err != nil {
+			days = 30
+		}
+		s, err := h.Blog.AuthorDailyStats(r.Context(), actor, days)
+		respond(w, r, http.StatusOK, map[string]any{"days": s}, err, "")
+	}
+}
+
 // forYou is the caller's ranked home feed.
 //
 // Ranks published posts by followed authors and tags, tags of posts the

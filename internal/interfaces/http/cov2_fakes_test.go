@@ -115,6 +115,16 @@ func (f *zPosts) Read(ctx context.Context, postID int, userID int, reader string
 	return
 }
 
+func (f *zPosts) AuthorDailyReads(ctx context.Context, userID int, since time.Time) (r0 map[string]int, r1 error) {
+	r1 = f.c.err
+	return
+}
+
+func (f *zPosts) AuthorPostIDs(ctx context.Context, userID int) (r0 []int, r1 error) {
+	r1 = f.c.err
+	return
+}
+
 func (f *zPosts) DailyReads(ctx context.Context, postID int, since time.Time) (r0 map[string]int, r1 error) {
 	r1 = f.c.err
 	return

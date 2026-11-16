@@ -137,6 +137,8 @@ func (v *vaultSource) fetch() (map[string]string, error) {
 		case string:
 			out[k] = s
 		case nil:
+		case json.Number:
+			out[k] = s.String()
 		default:
 			out[k] = fmt.Sprint(s)
 		}
@@ -197,5 +199,7 @@ func (v *vaultSource) call(ctx context.Context, c *http.Client, method, path, to
 	if out == nil {
 		return nil
 	}
-	return json.Unmarshal(data, out)
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber() // keep 1000000 as "1000000", not float64 "1e+06"
+	return dec.Decode(out)
 }

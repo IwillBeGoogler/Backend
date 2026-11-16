@@ -49,9 +49,17 @@ func childrenIndex(p Obj) map[string][]Obj {
 func mermaidFlow(p Obj) string {
 	lines := []string{"flowchart LR"}
 	kids := childrenIndex(p)
+	active := map[string]bool{}
 	var emit func(n Obj, ind string)
 	emit = func(n Obj, ind string) {
 		id := str(n["id"])
+		if id != "" {
+			if active[id] {
+				return
+			}
+			active[id] = true
+			defer delete(active, id)
+		}
 		if k, ok := kids[id]; ok && id != "" {
 			lines = append(lines, fmt.Sprintf(`%ssubgraph %s["%s"]`, ind, mID(id), mText(lbl(n))))
 			for _, c := range k {
@@ -227,9 +235,17 @@ func toPlantUML(p Obj) string {
 		}
 	} else {
 		kids := childrenIndex(p)
+		active := map[string]bool{}
 		var emit func(n Obj, ind string)
 		emit = func(n Obj, ind string) {
 			id := str(n["id"])
+			if id != "" {
+				if active[id] {
+					return
+				}
+				active[id] = true
+				defer delete(active, id)
+			}
 			name := strings.ReplaceAll(lbl(n), `"`, "'")
 			if k, ok := kids[id]; ok && id != "" {
 				lines = append(lines, fmt.Sprintf(`%srectangle "%s" as %s {`, ind, name, mID(id)))

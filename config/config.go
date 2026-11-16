@@ -371,7 +371,8 @@ func (c Config) AllowedOrigins() []string {
 	}
 	site := strings.TrimRight(c.SiteURL, "/")
 	if c.Dev() {
-		return []string{site, "http://localhost:8082"}
+		// local admin panel: the old dev port, the docker stack (:3100) and the Vite dev server (:5174)
+		return []string{site, "http://localhost:8082", "http://localhost:3100", "http://localhost:5174"}
 	}
 	return []string{site}
 }

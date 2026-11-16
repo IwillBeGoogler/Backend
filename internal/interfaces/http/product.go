@@ -280,7 +280,37 @@ func (h *Handler) pageFor(ctx context.Context, path string) (pageMeta, error) {
 			Description: clipRunes(desc, 200), Feed: h.SiteURL + "/api/users/" + prof.Username + "/feed.xml",
 		}, nil
 	}
+	if title, ok := publicSection(path); ok {
+		// diagrams, series, publications, lists, topics, glossary: no per-item metadata here yet, but
+		// crawlers and link previews still get a real 200 page for the site instead of a 404
+		return pageMeta{
+			Title: title, Type: "website", URL: h.SiteURL + "/" + path,
+			Description: title + " on " + site + " — stories, ideas and system design diagrams.",
+		}, nil
+	}
 	return pageMeta{}, errors.New("unknown route")
+}
+
+// publicSection tells whether path is one of the client's public listing/detail routes and gives it a title.
+func publicSection(path string) (string, bool) {
+	head, rest, _ := strings.Cut(path, "/")
+	switch head {
+	case "d":
+		if rest == "gallery" || strings.HasPrefix(rest, "v/") {
+			return "Diagrams", true
+		}
+	case "series":
+		return "Series", true
+	case "pub":
+		return "Publications", true
+	case "lists":
+		return "Reading lists", true
+	case "topics", "topic":
+		return "Topics", true
+	case "glossary":
+		return "Glossary", true
+	}
+	return "", false
 }
 
 func (h *Handler) postPage(ctx context.Context, slug string) (pageMeta, error) {
@@ -339,8 +369,8 @@ var (
 
 // plainText is a rough Markdown-to-text for descriptions.
 func plainText(md string) string {
-	if len(md) > 4000 {
-		md = md[:4000]
+	if r := []rune(md); len(r) > 4000 {
+		md = string(r[:4000]) // by runes: a byte cut can split a multi-byte character
 	}
 	md = mdLink.ReplaceAllString(md, "$1")
 	md = mdMarks.ReplaceAllString(md, " ")

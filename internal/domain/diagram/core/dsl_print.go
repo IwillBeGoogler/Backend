@@ -92,8 +92,16 @@ func printArch(page Obj, out *[]string) {
 		}
 		return ""
 	}
+	active := map[string]bool{}
 	var emit func(n Obj, ind string)
 	emit = func(n Obj, ind string) {
+		if id := str(n["id"]); id != "" {
+			if active[id] {
+				return
+			}
+			active[id] = true
+			defer delete(active, id)
+		}
 		kw := "node"
 		if str(n["type"]) == "group" {
 			kw = "group"

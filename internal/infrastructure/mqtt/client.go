@@ -95,9 +95,20 @@ func Connect(ctx context.Context, c Config, subs []Subscription, on func(applica
 			if len(opts) == 0 {
 				return
 			}
-			sub, err := cm.Subscribe(ctx, &paho.Subscribe{Subscriptions: opts})
+			var sub *paho.Suback
+			var err error
+			for attempt := 0; attempt < 5; attempt++ { // a failed subscribe leaves the app connected but deaf
+				if sub, err = cm.Subscribe(ctx, &paho.Subscribe{Subscriptions: opts}); err == nil {
+					break
+				}
+				zap.L().Error("mqtt: subscribe", zap.Int("attempt", attempt+1), zap.Error(err))
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Duration(attempt+1) * time.Second):
+				}
+			}
 			if err != nil {
-				zap.L().Error("mqtt: subscribe", zap.Error(err))
 				return
 			}
 			for i, rc := range sub.Reasons {

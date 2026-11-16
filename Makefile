@@ -16,9 +16,9 @@ run: ## run API (migrations run on start)
 	go run ./cmd/app
 
 build: ## build binary into bin/
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o $(BIN) ./cmd/app
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/worker ./cmd/worker
-	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/migrate ./cmd/migrate
+	CGO_ENABLED=0 go build -tags=nodynamic -trimpath -ldflags="-s -w" -o $(BIN) ./cmd/app
+	CGO_ENABLED=0 go build -tags=nodynamic -trimpath -ldflags="-s -w" -o bin/worker ./cmd/worker
+	CGO_ENABLED=0 go build -tags=nodynamic -trimpath -ldflags="-s -w" -o bin/migrate ./cmd/migrate
 
 schema-sql: ## dump the live DB schema as DDL: make schema-sql [PREFIX=dg_] [OUT=schema.sql] (stdout by default)
 	go run ./cmd/schemadump $(if $(PREFIX),-prefix $(PREFIX)) $(if $(OUT),-o $(OUT))

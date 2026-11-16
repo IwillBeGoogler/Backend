@@ -236,7 +236,7 @@ func (h *Handler) updateMe(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) deleteMe(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.requireUser(w, r)
 	var in deleteAccountInput
-	if ok && decode(w, r, &in) {
+	if ok && h.allow(w, r, "delete-account", 5, time.Minute) && decode(w, r, &in) {
 		at, err := h.Accounts.DeleteAccount(r.Context(), actor, in.Password)
 		respond(w, r, http.StatusAccepted, deletionScheduled{PurgeAt: at}, err, "")
 	}
@@ -251,7 +251,7 @@ func (h *Handler) deleteMe(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
 	actor, ok := h.requireUser(w, r)
 	var in passwordChange
-	if ok && decode(w, r, &in) {
+	if ok && h.allow(w, r, "change-password", 5, time.Minute) && decode(w, r, &in) {
 		s, err := h.Accounts.ChangePassword(r.Context(), actor, in.OldPassword, in.NewPassword, h.meta(r))
 		respond(w, r, http.StatusOK, s, err, "")
 	}

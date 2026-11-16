@@ -172,7 +172,23 @@ func (a *Accounts) provisionExternal(ctx context.Context, email, name string) (u
 		return user.User{}, err
 	}
 	u.EmailVerified = true
+	// keep the name the provider gave (the page shows it instead of the generated username)
+	if name = strings.TrimSpace(name); name != "" {
+		if up, err := a.users.UpdateProfile(ctx, u.ID, user.ProfileUpdate{DisplayName: clipName(name)}); err == nil {
+			u = up
+		} else {
+			zap.L().Warn("sso display name", zap.Any("ctx", ctx), zap.Int("id", u.ID), zap.Error(err))
+		}
+	}
 	return u, nil
+}
+
+// clipName cuts a provider name to the 64 characters a display name may have.
+func clipName(s string) string {
+	if r := []rune(s); len(r) > 64 {
+		return string(r[:64])
+	}
+	return s
 }
 
 func randInt(n int) int {

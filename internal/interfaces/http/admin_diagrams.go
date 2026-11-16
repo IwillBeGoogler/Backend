@@ -39,8 +39,15 @@ func (h *Handler) adminActor(w http.ResponseWriter, r *http.Request) (int, bool)
 	id := h.viewerID(r)
 	if id == 0 {
 		writeError(w, r, http.StatusUnauthorized, "unauthorized")
+		return id, false
 	}
-	return id, id != 0
+	if h.Accounts != nil {
+		if _, err := h.Accounts.User(r.Context(), id); err != nil {
+			writeError(w, r, http.StatusUnauthorized, "unauthorized")
+			return 0, false
+		}
+	}
+	return id, true
 }
 
 // diagramProblem answers err as problem details; a diagram error names what

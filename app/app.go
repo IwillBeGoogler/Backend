@@ -260,7 +260,16 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 	h = guardauth.WithPrincipal(h)
 	h = guardauth.AccessGate(g, ip, loc)(h)
 	h = httpguard.Authenticate(g, gopts)(h)
-	h = httpapi.TokenAuth(s.Diagrams, guardauth.UserActive(g))(h) // personal access tokens on /api/diagrams/v1 and MCP
+	guardActive := guardauth.UserActive(g)
+	tokenUserActive := func(ctx context.Context, id int) bool {
+		// a token must stop working with its account: banned (Guard) and deleted (grace period) alike
+		if !guardActive(ctx, id) {
+			return false
+		}
+		_, err := s.Accounts.User(ctx, id)
+		return err == nil
+	}
+	h = httpapi.TokenAuth(s.Diagrams, tokenUserActive)(h) // personal access tokens on /api/diagrams/v1 and MCP
 	h = middleware.GuardFormat(h)                                 // Guard's responses in the API's format
 	h = middleware.CORS(cfg.AllowedOrigins())(h)
 

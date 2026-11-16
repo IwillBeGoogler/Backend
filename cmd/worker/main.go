@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -77,7 +78,11 @@ func run() error {
 		// Liveness for -healthcheck: the worker has no public listener.
 		mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 		srv := &http.Server{Addr: cfg.MetricsAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
-		go srv.ListenAndServe()
+		go func() {
+			if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				zap.L().Error("worker metrics listener", zap.Error(err))
+			}
+		}()
 		defer srv.Close()
 	}
 	zap.L().Info("worker running", zap.String("version", version), zap.String("commit", commit))

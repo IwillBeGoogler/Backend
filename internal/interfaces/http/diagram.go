@@ -329,8 +329,15 @@ func (h *Handler) dgUser(w http.ResponseWriter, r *http.Request) (int, bool) {
 	id := h.viewerID(r)
 	if id == 0 {
 		dgFail(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required", nil)
+		return id, false
 	}
-	return id, id != 0
+	if h.Accounts != nil { // an account in its deletion grace period no longer acts
+		if _, err := h.Accounts.User(r.Context(), id); err != nil {
+			dgFail(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required", nil)
+			return 0, false
+		}
+	}
+	return id, true
 }
 
 // dgReq is the caller's id and the {id} path value, or the error response.

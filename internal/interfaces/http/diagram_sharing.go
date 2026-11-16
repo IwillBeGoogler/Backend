@@ -430,6 +430,9 @@ func (h *Handler) dgSaveShare(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !h.dgAllow(w, r, "share-save", 120, time.Minute) {
+		return
+	}
 	fileID := r.PathValue("fileId")
 	if fileID != "" {
 		if fileID, ok = dgID(w, r, "fileId"); !ok {
@@ -463,7 +466,11 @@ func (h *Handler) dgAllow(w http.ResponseWriter, r *http.Request, name string, n
 	if h.Limit == nil {
 		return true
 	}
-	ok, retry := h.Limit(r.Context(), name+":user:"+strconv.Itoa(h.viewerID(r)), n, window)
+	who := "ip:" + h.clientIP(r)
+	if id := h.viewerID(r); id != 0 {
+		who = "user:" + strconv.Itoa(id)
+	}
+	ok, retry := h.Limit(r.Context(), name+":"+who, n, window)
 	if ok {
 		return true
 	}

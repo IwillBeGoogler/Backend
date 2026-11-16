@@ -174,6 +174,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/me/posts", h.myPosts)
 	mux.HandleFunc("GET /api/me/feed", h.feed)
 	mux.HandleFunc("GET /api/me/stats", h.myStats)
+	mux.HandleFunc("GET /api/me/stats/daily", h.authorDailyStats)
 	mux.HandleFunc("GET /api/me/stats/{id}", h.postDailyStats)
 	mux.HandleFunc("GET /api/me/for-you", h.forYou)
 	mux.HandleFunc("GET /api/me/hidden", h.hidden)

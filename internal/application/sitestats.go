@@ -26,10 +26,11 @@ const (
 
 // SiteCounts are the database counts of public content and people.
 type SiteCounts struct {
-	Posts    int `json:"posts"`    // published posts
-	Diagrams int `json:"diagrams"` // public diagrams
-	Users    int `json:"users"`    // active accounts
-	Visitors int `json:"visitors"` // distinct page_view visitors, all time
+	Posts       int   `json:"posts"`        // published posts
+	Diagrams    int   `json:"diagrams"`     // public diagrams
+	Users       int   `json:"users"`        // active accounts
+	Visitors    int   `json:"visitors"`     // distinct page_view visitors, all time
+	ReadSeconds int64 `json:"read_seconds"` // all-time reading time on published posts
 }
 
 // PostRef is a published post as the stats list it.
@@ -38,6 +39,9 @@ type PostRef struct {
 	Slug   string
 	Title  string
 	Author string
+
+	ReadSeconds  int64 // all-time active reading time
+	ReadSessions int
 }
 
 // DiagramRef is a public diagram as the stats list it.
@@ -65,6 +69,7 @@ type SiteTotals struct {
 	Posts        int   `json:"posts"`
 	Diagrams     int   `json:"diagrams"`
 	Users        int   `json:"users"`
+	ReadSeconds  int64 `json:"read_seconds"`
 }
 
 // TopPost is a post with its unique views.
@@ -74,6 +79,8 @@ type TopPost struct {
 	Title  string `json:"title"`
 	Author string `json:"author"`
 	Views  int64  `json:"views"`
+	// AvgReadSeconds is the average active reading time per visit; 0 when unknown.
+	AvgReadSeconds float64 `json:"avg_read_seconds"`
 }
 
 // TopDiagram is a public diagram with its unique views.
@@ -147,7 +154,8 @@ func (s *SiteStats) snapshot(ctx context.Context) (siteSnapshot, error) {
 	if err != nil {
 		return siteSnapshot{}, err
 	}
-	snap := siteSnapshot{totals: SiteTotals{Visitors: counts.Visitors, Posts: counts.Posts, Diagrams: counts.Diagrams, Users: counts.Users},
+	snap := siteSnapshot{totals: SiteTotals{Visitors: counts.Visitors, Posts: counts.Posts, Diagrams: counts.Diagrams, Users: counts.Users,
+		ReadSeconds: counts.ReadSeconds},
 		posts: make([]TopPost, len(posts)), diagrams: make([]TopDiagram, len(diagrams))}
 
 	var pv map[int]int64
@@ -160,6 +168,9 @@ func (s *SiteStats) snapshot(ctx context.Context) (siteSnapshot, error) {
 	}
 	for i, p := range posts {
 		snap.posts[i] = TopPost{ID: p.ID, Slug: p.Slug, Title: p.Title, Author: p.Author, Views: pv[p.ID]}
+		if p.ReadSessions > 0 {
+			snap.posts[i].AvgReadSeconds = float64(p.ReadSeconds) / float64(p.ReadSessions)
+		}
 		snap.totals.PostViews += pv[p.ID]
 	}
 	var dv map[string]int64
