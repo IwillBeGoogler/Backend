@@ -58,8 +58,8 @@ type publicConfig struct {
 	CaptchaSiteKey string `json:"captcha_site_key"`
 	// Analytics tells whether POST /api/events is recorded.
 	Analytics bool `json:"analytics"`
-	// GAMeasurementID is the Google Analytics 4 id; empty = no Google Analytics.
-	GAMeasurementID string `json:"ga_measurement_id"`
+	// GTMContainerID is the Google Tag Manager id; empty = no Tag Manager.
+	GTMContainerID string `json:"gtm_container_id"`
 	// SSO lists the enabled social login providers.
 	SSO ssoConfig `json:"sso"`
 }
@@ -80,7 +80,7 @@ type ssoConfig struct {
 // spector:tags ops
 func (h *Handler) publicConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	cfg := publicConfig{CaptchaSiteKey: h.CaptchaSiteKey, Analytics: h.Analytics != nil, GAMeasurementID: h.GAMeasurementID}
+	cfg := publicConfig{CaptchaSiteKey: h.CaptchaSiteKey, Analytics: h.Analytics != nil, GTMContainerID: h.GTMContainerID}
 	cfg.SSO = ssoConfig{Google: ssoProvider{h.Social["google"] != nil}, GitHub: ssoProvider{h.Social["github"] != nil}}
 	writeJSON(w, http.StatusOK, cfg)
 }

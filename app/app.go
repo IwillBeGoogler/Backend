@@ -243,12 +243,12 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 		MCPRatePerMinute: cfg.MCPRatePerMinute,
 		Schema:           schema,
 
-		Analytics:       s.Analytics,
-		SiteStats:       s.SiteStats,
-		Captcha:         verifyCaptcha,
-		CaptchaSiteKey:  cfg.TurnstileSiteKey,
-		GAMeasurementID: cfg.GAMeasurementID,
-		SiteName:        cfg.SiteName,
+		Analytics:      s.Analytics,
+		SiteStats:      s.SiteStats,
+		Captcha:        verifyCaptcha,
+		CaptchaSiteKey: cfg.TurnstileSiteKey,
+		GTMContainerID: cfg.GTMContainerID,
+		SiteName:       cfg.SiteName,
 
 		Social: social,
 	}).Routes(api)

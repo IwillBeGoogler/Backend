@@ -64,8 +64,8 @@ type Deps struct {
 	Captcha func(ctx context.Context, token, remoteIP string) error
 	// CaptchaSiteKey is the public Turnstile key the client renders with.
 	CaptchaSiteKey string
-	// GAMeasurementID is the Google Analytics 4 id the client loads after consent; empty = off.
-	GAMeasurementID string
+	// GTMContainerID is the Google Tag Manager id the client loads after consent; empty = off.
+	GTMContainerID string
 	// SiteName is the product name in prerendered pages and feeds.
 	SiteName string
 	// MCPEnabled serves the MCP server at /api/diagrams/mcp, with
