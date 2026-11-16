@@ -215,7 +215,14 @@ func TestGuardAuth(t *testing.T) {
 	if len(list) < 2 {
 		t.Fatalf("sessions %d", len(list))
 	}
-	must(t, id.RevokeSession(ctx, ali, list[0].ID))
+	// revoke a session other than the one just started (the list order is not defined: Redis returns a set)
+	startedID, err := id.SessionID(ctx, started.Token)
+	must(t, err)
+	other := list[0].ID
+	if other == startedID {
+		other = list[1].ID
+	}
+	must(t, id.RevokeSession(ctx, ali, other))
 	if err := id.RevokeSession(ctx, ali, "no-such-session"); !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("revoke missing: %v", err)
 	}

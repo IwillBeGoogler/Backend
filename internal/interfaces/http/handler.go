@@ -321,7 +321,13 @@ func (h *Handler) clientIP(r *http.Request) string {
 }
 
 func (h *Handler) meta(r *http.Request) application.Meta {
-	return application.Meta{IP: h.clientIP(r), UserAgent: r.UserAgent()}
+	m := application.Meta{IP: h.clientIP(r), UserAgent: r.UserAgent(), Forwarded: r.Header.Get("X-Forwarded-For")}
+	if tag, _, _ := strings.Cut(r.Header.Get("Accept-Language"), ","); tag != "" {
+		if tag, _, _ = strings.Cut(tag, ";"); strings.TrimSpace(tag) != "" && strings.TrimSpace(tag) != "*" {
+			m.Locale, m.LocaleSource = strings.TrimSpace(tag), "header"
+		}
+	}
+	return m
 }
 
 func bearer(r *http.Request) string {

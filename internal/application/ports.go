@@ -142,6 +142,11 @@ type Object struct {
 type Meta struct {
 	IP        string
 	UserAgent string
+	// Forwarded is X-Forwarded-For as received; Locale and LocaleSource the language the client asked for
+	// ("header": the first Accept-Language tag). Kept with the login session.
+	Forwarded    string
+	Locale       string
+	LocaleSource string
 }
 
 // Session is a logged-in session: send Token as "Authorization: Bearer".

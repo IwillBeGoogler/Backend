@@ -5,7 +5,7 @@ go 1.27.3
 require (
 	github.com/bakhod1r/emailx v0.4.0
 	github.com/bakhod1r/errorx v0.1.0
-	github.com/bakhod1r/guard v0.4.0
+	github.com/bakhod1r/guard v0.5.2
 	github.com/bakhod1r/oneenv v1.10.3
 	github.com/bakhod1r/spector v0.7.0
 	github.com/coreos/go-oidc/v3 v3.21.0
@@ -37,7 +37,6 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.47.0
-	go.opentelemetry.io/otel/log v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
 	go.opentelemetry.io/otel/sdk/log v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
@@ -56,9 +55,14 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20261006220739-8c912ac31dd4 // indirect
 	github.com/Microsoft/go-winio v0.6.4 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/bakhod1r/devicex v0.2.1 // indirect
+	github.com/bakhod1r/alx v0.1.0 // indirect
+	github.com/bakhod1r/devicex v0.3.0 // indirect
+	github.com/bakhod1r/enumx v1.2.1 // indirect
 	github.com/bakhod1r/phonex v0.1.0 // indirect
+	github.com/bakhod1r/sessionx v0.1.0 // indirect
+	github.com/bakhod1r/sessionx/sqlstore v0.1.0 // indirect
 	github.com/bakhod1r/synth v1.7.0 // indirect
+	github.com/bakhod1r/uax v0.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -142,6 +146,7 @@ require (
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.47.0 // indirect
+	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/atomic v1.12.0 // indirect

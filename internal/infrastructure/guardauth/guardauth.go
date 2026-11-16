@@ -54,6 +54,11 @@ func Open(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, o Options) (
 		PasswordHashParams: hash,
 		AuditEmailKey:      emailKey,
 		Session:            guard.SessionPolicy{IdleTimeout: o.SessionIdle, AbsoluteTimeout: o.SessionAbsolute},
+		// Sessions live in Postgres (guard_session, Guard migration 00008): a Redis restart, eviction or flush no longer
+		// signs anyone out. LegacyRedisSessions carries sessions created before the switch over on first use; drop it once
+		// SESSION_ABSOLUTE_TIMEOUT (7 days by default) has passed since that release.
+		SessionStore:        guard.SessionPostgres,
+		LegacyRedisSessions: true,
 	})
 	if err != nil {
 		return nil, err
@@ -233,7 +238,7 @@ func credentialsErr(err error) error {
 }
 
 func (i Identity) Login(ctx context.Context, email, password string, m application.Meta) (application.Credentials, error) {
-	res, err := i.G.Login(ctx, email, password, guard.RequestMeta{IP: m.IP, UserAgent: m.UserAgent})
+	res, err := i.G.Login(ctx, email, password, guard.RequestMeta{IP: m.IP, UserAgent: m.UserAgent, Forwarded: m.Forwarded, Locale: m.Locale, LocaleSource: m.LocaleSource})
 	if err != nil {
 		return application.Credentials{}, credentialsErr(err)
 	}
@@ -253,7 +258,7 @@ func (i Identity) Logout(ctx context.Context, token string, m application.Meta) 
 	if err != nil {
 		return authErr(err)
 	}
-	return i.G.Logout(ctx, p, guard.RequestMeta{IP: m.IP, UserAgent: m.UserAgent})
+	return i.G.Logout(ctx, p, guard.RequestMeta{IP: m.IP, UserAgent: m.UserAgent, Forwarded: m.Forwarded, Locale: m.Locale, LocaleSource: m.LocaleSource})
 }
 
 // LogoutAll ends every session and revokes every API key of the user, so a
