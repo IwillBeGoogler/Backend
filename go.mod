@@ -5,7 +5,7 @@ go 1.27.3
 require (
 	github.com/bakhod1r/emailx v0.4.0
 	github.com/bakhod1r/errorx v0.1.0
-	github.com/bakhod1r/guard v0.5.2
+	github.com/bakhod1r/guard v0.6.0
 	github.com/bakhod1r/oneenv v1.10.3
 	github.com/bakhod1r/spector v0.7.0
 	github.com/coreos/go-oidc/v3 v3.21.0
@@ -167,5 +167,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
-
-replace github.com/bakhod1r/guard => ../../guard
