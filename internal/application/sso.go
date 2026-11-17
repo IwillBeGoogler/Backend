@@ -73,7 +73,7 @@ func (a *Accounts) LoginExternal(ctx context.Context, provider string, id Extern
 		return Session{}, err
 	}
 	a.blog.Audit.Record(ctx, u.ID, "auth.login_sso", "user:"+itoa(u.ID), map[string]any{"provider": provider, "ip": m.IP, "linked": linked})
-	return a.finishLogin(ctx, u, Session{Token: c.Token, ExpiresAt: c.ExpiresAt, User: u})
+	return a.finishLogin(ctx, u, NewSession(c, u))
 }
 
 func (a *Accounts) resolveByEmail(ctx context.Context, provider string, id ExternalIdentity) (user.User, bool, error) {

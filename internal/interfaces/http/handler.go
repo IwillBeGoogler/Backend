@@ -60,6 +60,8 @@ type Deps struct {
 	Analytics *application.Analytics
 	// SiteStats serves the site statistics (nil disables them).
 	SiteStats *application.SiteStats
+	// Insights serves the admin insights report (nil disables it).
+	Insights *application.Insights
 	// Captcha verifies a signup CAPTCHA token (nil: no CAPTCHA).
 	Captcha func(ctx context.Context, token, remoteIP string) error
 	// CaptchaSiteKey is the public Turnstile key the client renders with.
@@ -258,6 +260,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/config", h.publicConfig)
 	mux.HandleFunc("POST /api/events", h.trackEvent)
 	mux.HandleFunc("GET /api/admin/analytics", h.analytics)
+	mux.HandleFunc("GET /api/admin/insights", h.adminInsights)
 	mux.HandleFunc("GET /api/prerender/{path...}", h.prerender)
 	h.adminDiagramRoutes(mux)
 	h.diagramRoutes(mux)

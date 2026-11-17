@@ -420,3 +420,25 @@ func clipRunes(s string, n int) string {
 	r := []rune(s)
 	return strings.TrimSpace(string(r[:n-1])) + "…"
 }
+
+// adminInsights is the admin reports page: posts, users, diagrams and
+// moderation figures for the last N days, with daily series, breakdowns and
+// top lists.
+//
+// Query: days (1-365, default 30).
+// Response: {"data": {days, posts, users, diagrams, moderation}}.
+// Auth: stats.read.
+//
+// spector:tags admin
+func (h *Handler) adminInsights(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.requireUser(w, r); !ok {
+		return
+	}
+	if h.Insights == nil {
+		writeError(w, r, http.StatusNotFound, "insights disabled")
+		return
+	}
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
+	rep, err := h.Insights.Report(r.Context(), days)
+	respond(w, r, http.StatusOK, rep, err, "")
+}

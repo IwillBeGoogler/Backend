@@ -70,15 +70,15 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		h.Analytics.Record(r.Context(), application.EventSignup, s.User.ID, 0)
 	}
-	respond(w, r, http.StatusCreated, s, err, "")
+	h.respondSession(w, r, http.StatusCreated, s, err)
 }
 
-// login returns a session for a username or email and password.
+// login returns an access token for a username or email and password.
 //
-// Send the token as Authorization: Bearer <token>. The session ends after
-// SESSION_IDLE_TIMEOUT (30 minutes) without a request, each request slides
-// that window, and at the latest SESSION_ABSOLUTE_TIMEOUT (7 days) after
-// login. POST /api/auth/refresh rotates the token of a live session; an
+// Send access_token as Authorization: Bearer <token> until expires_at
+// (ACCESS_TOKEN_TTL, 3 hours). refresh_token, valid until refresh_expires_at,
+// goes to POST /api/auth/refresh for a new pair. The refresh token ends after SESSION_IDLE_TIMEOUT without a refresh
+// and at the latest SESSION_ABSOLUTE_TIMEOUT (30 days) after login; an
 // expired one needs a new login. Logging in to an
 // account with a pending deletion restores it. Rate limit: 10 per minute
 // per IP; repeated failures lock the account briefly.
@@ -92,28 +92,53 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	var in loginInput
 	if decode(w, r, &in) {
 		s, err := h.Accounts.Login(r.Context(), in.Login, in.Password, h.meta(r))
-		respond(w, r, http.StatusOK, s, err, "")
+		h.respondSession(w, r, http.StatusOK, s, err)
 	}
 }
 
-// refresh rotates the session token.
+// refresh trades a refresh token for a new access and refresh token.
 //
-// The old token stops working; use the returned one.
-// Auth: Bearer token.
+// Body {"refresh_token": "..."} (or Authorization: Bearer <refresh token>).
+// The old refresh token stops working; 401 when it is expired, revoked or
+// already used.
+// Auth: refresh token.
 //
 // spector:tags auth
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
-	s, err := h.Accounts.Refresh(r.Context(), bearer(r))
-	respond(w, r, http.StatusOK, s, err, "")
+	tok := refreshToken(r)
+	if tok == "" {
+		writeError(w, r, http.StatusUnauthorized, "refresh token required")
+		return
+	}
+	s, err := h.Accounts.Refresh(r.Context(), tok)
+	h.respondSession(w, r, http.StatusOK, s, err)
 }
 
-// logout ends the current session.
+// logout ends the current session: the refresh token and every access token
+// issued from it.
 //
-// Auth: Bearer token.
+// Body {"refresh_token": "..."} and/or Authorization: Bearer <access token>.
+// Auth: refresh or access token.
 //
 // spector:tags auth
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
-	noContent(w, r, h.Accounts.Logout(r.Context(), bearer(r), h.meta(r)), "")
+	var ended bool
+	for _, t := range []string{refreshToken(r), bearer(r)} {
+		if t == "" {
+			continue
+		}
+		err := h.Accounts.Logout(r.Context(), t, h.meta(r))
+		if err != nil && !unauthorized(err) {
+			noContent(w, r, err, "")
+			return
+		}
+		ended = ended || err == nil
+	}
+	if !ended {
+		writeError(w, r, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // logoutAll ends every session of the caller.
@@ -272,7 +297,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
 	var in passwordChange
 	if ok && h.allow(w, r, "change-password", 5, time.Minute) && decode(w, r, &in) {
 		s, err := h.Accounts.ChangePassword(r.Context(), actor, in.OldPassword, in.NewPassword, h.meta(r))
-		respond(w, r, http.StatusOK, s, err, "")
+		h.respondSession(w, r, http.StatusOK, s, err)
 	}
 }
 

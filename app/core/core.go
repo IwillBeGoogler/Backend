@@ -50,6 +50,7 @@ type Services struct {
 	Diagrams  *application.Diagrams
 	Analytics *application.Analytics // nil unless cfg.Analytics
 	SiteStats *application.SiteStats
+	Insights  *application.Insights
 
 	close []func()
 }
@@ -113,6 +114,7 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 		HashThreads:   cfg.PasswordHashThreads,
 		AuditEmailKey: cfg.AuditEmailKey,
 		SessionIdle:   cfg.SessionIdleTimeout, SessionAbsolute: cfg.SessionAbsoluteTimeout,
+		AccessSecret: cfg.AccessTokenSecret, AccessPreviousSecret: cfg.AccessTokenPreviousSecret, AccessTTL: cfg.AccessTokenTTL,
 		// Guard schema + access seed run here only with MIGRATE_ON_START;
 		// otherwise cmd/migrate owns them.
 		Migrate:     cfg.MigrateOnStart,
@@ -250,6 +252,7 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 	})
 	s.Diagrams.Views = redis.DiagramViews{RDB: rdb}
 	s.SiteStats = application.NewSiteStats(postgres.NewSiteStatsRepo(db), redis.Views{RDB: rdb}, s.Diagrams.Views, guardauth.Authorizer{G: g})
+	s.Insights = application.NewInsights(postgres.NewInsightsRepo(db), guardauth.Authorizer{G: g})
 	s.Diagrams.Notices = blog // comment notifications ride the blog's notification system and its live stream
 
 	if cfg.Analytics {

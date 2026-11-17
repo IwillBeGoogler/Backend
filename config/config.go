@@ -23,11 +23,13 @@ const (
 	// internal secret; the compose stack's EMQX is configured with the same.
 	DevMQTTPassword = "dev-mqtt-password-change-me-0123456789"
 	DevMQTTSecret   = "dev-mqtt-internal-secret-change-me-0123456789"
+	// DevAccessTokenSecret signs access tokens in development.
+	DevAccessTokenSecret = "dev-access-token-secret-change-me-0123456789"
 )
 
 // weakSecrets are well-known defaults that must never reach production.
 var weakSecrets = map[string]bool{
-	"": true, "dev-mfa-key-change-me": true, DevMFAKey: true, DevUnsubscribeKey: true, DevMQTTPassword: true, DevMQTTSecret: true,
+	"": true, "dev-mfa-key-change-me": true, DevMFAKey: true, DevUnsubscribeKey: true, DevMQTTPassword: true, DevMQTTSecret: true, DevAccessTokenSecret: true,
 	"admin12345": true, "minio12345": true, "blog": true, "minio": true, "admin": true, "password": true,
 }
 
@@ -91,12 +93,17 @@ type Config struct {
 	// instead of plain SHA-256). Generate with: openssl rand -hex 32
 	AuditEmailKey string `env:"AUDIT_EMAIL_KEY,secret" desc:"hex key, >= 32 bytes, for email HMAC in audit events"`
 
-	// Session lifetime (Guard). A session ends after SessionIdleTimeout
-	// without a request (each request slides the window) and at the latest
-	// SessionAbsoluteTimeout after login. POST /api/auth/refresh rotates the
-	// token of a session that is still valid; it cannot revive an expired one.
-	SessionIdleTimeout     time.Duration `env:"SESSION_IDLE_TIMEOUT" default:"30m" desc:"sign a session out after this long without a request (min 1m)"`
-	SessionAbsoluteTimeout time.Duration `env:"SESSION_ABSOLUTE_TIMEOUT" default:"168h" desc:"longest a session lasts from login, whatever the activity (>= SESSION_IDLE_TIMEOUT)"`
+	// Tokens (Guard). Login returns a short-lived access token (HS256 JWT,
+	// ACCESS_TOKEN_TTL) and sets the refresh token (the Guard session) in an
+	// HttpOnly cookie. POST /api/auth/refresh rotates the refresh token and
+	// returns a new access token. The session (refresh token) ends after
+	// SESSION_IDLE_TIMEOUT without a refresh and at the latest
+	// SESSION_ABSOLUTE_TIMEOUT after login; an expired one needs a new login.
+	AccessTokenTTL            time.Duration `env:"ACCESS_TOKEN_TTL" default:"3h" desc:"access token lifetime (min 1m, shorter than SESSION_IDLE_TIMEOUT)"`
+	AccessTokenSecret         string        `env:"ACCESS_TOKEN_SECRET,secret" desc:"HMAC key (>= 32 characters) signing access tokens: openssl rand -hex 32"`
+	AccessTokenPreviousSecret string        `env:"ACCESS_TOKEN_PREVIOUS_SECRET,secret" desc:"previous ACCESS_TOKEN_SECRET, still accepted during a rotation (one ACCESS_TOKEN_TTL)"`
+	SessionIdleTimeout        time.Duration `env:"SESSION_IDLE_TIMEOUT" default:"720h" desc:"refresh token: end the session after this long without a refresh (min 1m)"`
+	SessionAbsoluteTimeout    time.Duration `env:"SESSION_ABSOLUTE_TIMEOUT" default:"720h" desc:"refresh token: longest a session lasts from login, whatever the activity (>= SESSION_IDLE_TIMEOUT)"`
 
 	SiteName string `env:"SITE_NAME" default:"IWillBeGoogler" desc:"product name in feeds and prerendered pages"`
 
@@ -213,6 +220,13 @@ func (c *Config) Validate() error {
 	if c.SessionAbsoluteTimeout != 0 && c.SessionAbsoluteTimeout < c.SessionIdleTimeout {
 		return fmt.Errorf("config: SESSION_ABSOLUTE_TIMEOUT (%s) must not be shorter than SESSION_IDLE_TIMEOUT (%s)", c.SessionAbsoluteTimeout, c.SessionIdleTimeout)
 	}
+	if c.AccessTokenTTL != 0 && c.AccessTokenTTL < time.Minute {
+		return fmt.Errorf("config: ACCESS_TOKEN_TTL must be at least 1m, got %s", c.AccessTokenTTL)
+	}
+	if c.AccessTokenTTL != 0 && c.SessionIdleTimeout != 0 && c.SessionIdleTimeout <= c.AccessTokenTTL {
+		// the session is only touched on refresh: an idle window shorter than an access token would end it mid-use
+		return fmt.Errorf("config: SESSION_IDLE_TIMEOUT (%s) must be longer than ACCESS_TOKEN_TTL (%s)", c.SessionIdleTimeout, c.AccessTokenTTL)
+	}
 	c.RateLimitMultiplier = max(c.RateLimitMultiplier, 1)
 	if _, err := c.ICE(); err != nil {
 		return err
@@ -230,6 +244,9 @@ func (c *Config) Validate() error {
 		if c.MQTTInternalSecret == "" {
 			c.MQTTInternalSecret = DevMQTTSecret
 		}
+		if c.AccessTokenSecret == "" {
+			c.AccessTokenSecret = DevAccessTokenSecret
+		}
 		return nil
 	}
 	var errs []error
@@ -239,6 +256,10 @@ func (c *Config) Validate() error {
 		}
 	}
 	strong("MFA_KEY", c.MFAKey)
+	strong("ACCESS_TOKEN_SECRET", c.AccessTokenSecret)
+	if c.AccessTokenPreviousSecret != "" {
+		strong("ACCESS_TOKEN_PREVIOUS_SECRET", c.AccessTokenPreviousSecret)
+	}
 	if c.MQTTURL != "" {
 		strong("MQTT_PASSWORD", c.MQTTPassword)
 		strong("MQTT_INTERNAL_SECRET", c.MQTTInternalSecret)

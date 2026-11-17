@@ -74,7 +74,7 @@ func (a *Accounts) LoginMFA(ctx context.Context, token, code string, m Meta) (Se
 		return Session{}, err
 	}
 	a.blog.Audit.Record(ctx, id, "auth.login_mfa", "user:"+itoa(id), map[string]any{"ip": m.IP})
-	return a.finishLogin(ctx, u, Session{Token: c.Token, ExpiresAt: c.ExpiresAt, User: u})
+	return a.finishLogin(ctx, u, NewSession(c, u))
 }
 
 // checkSecondFactor accepts a current TOTP code (each only once) or an

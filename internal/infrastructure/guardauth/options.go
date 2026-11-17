@@ -1,6 +1,7 @@
 package guardauth
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -22,6 +23,13 @@ type Options struct {
 	// SESSION_ABSOLUTE_TIMEOUT. Zero keeps Guard's defaults (30 minutes, 7 days).
 	SessionIdle     time.Duration
 	SessionAbsolute time.Duration
+	// AccessSecret (ACCESS_TOKEN_SECRET, >= 32 bytes) turns on access tokens
+	// (HS256 JWT, AccessTTL long); the session becomes the refresh token.
+	// AccessPreviousSecret still verifies tokens signed before a rotation.
+	// Empty AccessSecret: sessions only.
+	AccessSecret         string
+	AccessPreviousSecret string
+	AccessTTL            time.Duration
 	// Migrate applies Guard's migrations and seeds permissions, roles and
 	// policies (Seed, SeedAccessRules) when Open runs. MIGRATE_ON_START.
 	Migrate bool
@@ -68,4 +76,24 @@ func (o Options) auditEmailKey() ([]byte, error) {
 		return nil, fmt.Errorf("AUDIT_EMAIL_KEY: %d bytes, need at least %d (openssl rand -hex 32)", len(key), minAuditEmailKey)
 	}
 	return key, nil
+}
+
+// accessToken builds Guard's access-token options; nil without a secret.
+// Key ids derive from the secret, so rotating needs no extra setting.
+func (o Options) accessToken() (*guard.AccessTokenOptions, error) {
+	if o.AccessSecret == "" {
+		return nil, nil
+	}
+	a := &guard.AccessTokenOptions{TTL: o.AccessTTL, Issuer: "iwillbegoogler", Audience: "iwillbegoogler"}
+	for _, s := range []string{o.AccessSecret, o.AccessPreviousSecret} {
+		if s == "" {
+			continue
+		}
+		if len(s) < 32 {
+			return nil, fmt.Errorf("ACCESS_TOKEN_SECRET: %d bytes, need at least 32 (openssl rand -hex 32)", len(s))
+		}
+		sum := sha256.Sum256([]byte(s))
+		a.Keys = append(a.Keys, guard.AccessKey{ID: hex.EncodeToString(sum[:4]), Secret: []byte(s)})
+	}
+	return a, nil
 }

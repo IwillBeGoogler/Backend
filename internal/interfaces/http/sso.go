@@ -89,7 +89,9 @@ func (h *Handler) socialCallback(w http.ResponseWriter, r *http.Request) {
 		fail("failed", "login", err)
 		return
 	}
-	h.ssoRedirect(w, r, url.Values{"token": {s.Token}, "expires_at": {s.ExpiresAt.UTC().Format(time.RFC3339)}})
+	h.ssoRedirect(w, r, url.Values{"access_token": {s.AccessToken}, "token": {s.AccessToken},
+		"expires_at": {s.ExpiresAt.UTC().Format(time.RFC3339)}, "refresh_token": {s.RefreshToken},
+		"refresh_expires_at": {s.RefreshExpiresAt.UTC().Format(time.RFC3339)}})
 }
 
 // ssoRedirect sends the browser to SITE_URL/auth/callback#<values>.

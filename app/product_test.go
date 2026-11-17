@@ -169,3 +169,39 @@ func TestSignupCaptchaAndHoneypot(t *testing.T) {
 	anon.do("POST", "/api/auth/register", body("human", "http://spam"), 400, nil)
 	anon.do("POST", "/api/auth/register", body("human", ""), 201, nil)
 }
+
+func TestAdminInsights(t *testing.T) {
+	e := start(t)
+	anon := e.anon(t)
+	ali := anon.register("ali")
+	ali.do("POST", "/api/posts", map[string]any{"title": "Hello", "body": "world"}, 201, nil)
+	ali.do("GET", "/api/admin/insights", nil, 403, nil)
+
+	admin := anon.login("admin", "admin-pass-123")
+	var rep struct {
+		Days  int `json:"days"`
+		Posts struct {
+			Total   int `json:"total"`
+			Created []struct {
+				Day   string
+				Count int
+			} `json:"created"`
+		} `json:"posts"`
+		Users struct {
+			Total int `json:"total"`
+			New   int `json:"new"`
+		} `json:"users"`
+		Diagrams   struct{ Projects int } `json:"diagrams"`
+		Moderation struct {
+			OpenReports int `json:"open_reports"`
+		} `json:"moderation"`
+	}
+	admin.do("GET", "/api/admin/insights?days=7", nil, 200, &rep)
+	if rep.Days != 7 || len(rep.Posts.Created) != 7 || rep.Posts.Total < 1 || rep.Users.Total < 2 || rep.Users.New < 1 {
+		t.Errorf("insights = %+v", rep)
+	}
+	admin.do("GET", "/api/admin/insights?days=9999", nil, 200, &rep)
+	if rep.Days != 365 {
+		t.Errorf("days clamp = %d", rep.Days)
+	}
+}

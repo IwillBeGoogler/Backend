@@ -175,7 +175,7 @@ func (a *Accounts) startSession(ctx context.Context, u user.User, password strin
 	if u.Roles, err = a.identity.Roles(ctx, u.ID); err != nil {
 		return Session{}, err
 	}
-	return Session{Token: c.Token, ExpiresAt: c.ExpiresAt, User: u}, nil
+	return NewSession(c, u), nil
 }
 
 func (a *Accounts) Refresh(ctx context.Context, token string) (Session, error) {
@@ -190,7 +190,7 @@ func (a *Accounts) Refresh(ctx context.Context, token string) (Session, error) {
 		return Session{}, err
 	}
 	u, err := a.User(ctx, id)
-	return Session{Token: c.Token, ExpiresAt: c.ExpiresAt, User: u}, err
+	return NewSession(c, u), err
 }
 
 func (a *Accounts) Logout(ctx context.Context, token string, m Meta) error {

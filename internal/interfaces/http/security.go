@@ -47,7 +47,7 @@ func (h *Handler) loginMFA(w http.ResponseWriter, r *http.Request) {
 	var in mfaLoginInput
 	if decode(w, r, &in) {
 		s, err := h.Accounts.LoginMFA(r.Context(), in.MFAToken, in.Code, h.meta(r))
-		respond(w, r, http.StatusOK, s, err, "")
+		h.respondSession(w, r, http.StatusOK, s, err)
 	}
 }
 

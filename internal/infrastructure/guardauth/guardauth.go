@@ -42,6 +42,10 @@ func Open(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, o Options) (
 	if err != nil {
 		return nil, err
 	}
+	access, err := o.accessToken()
+	if err != nil {
+		return nil, err
+	}
 	if emailKey == nil {
 		zap.L().Warn("AUDIT_EMAIL_KEY not set: audit events store an unkeyed email fingerprint", zap.Any("ctx", ctx))
 	}
@@ -53,6 +57,7 @@ func Open(ctx context.Context, db *pgxpool.Pool, rdb *redis.Client, o Options) (
 		Logger:             slog.New(zapslog.NewHandler(zap.L().Core())),
 		PasswordHashParams: hash,
 		AuditEmailKey:      emailKey,
+		AccessToken:        access,
 		Session:            guard.SessionPolicy{IdleTimeout: o.SessionIdle, AbsoluteTimeout: o.SessionAbsolute},
 		// Sessions live in Postgres (guard_session, Guard migration 00008): a Redis restart, eviction or flush no longer
 		// signs anyone out. LegacyRedisSessions carries sessions created before the switch over on first use; drop it once
@@ -242,7 +247,8 @@ func (i Identity) Login(ctx context.Context, email, password string, m applicati
 	if err != nil {
 		return application.Credentials{}, credentialsErr(err)
 	}
-	return application.Credentials{Token: string(res.Token), ExpiresAt: res.Session.ExpiresAt}, nil
+	return application.Credentials{Token: string(res.Token), ExpiresAt: res.Session.ExpiresAt,
+		Access: string(res.Access), AccessExpiresAt: res.AccessClaims.ExpiresAt}, nil
 }
 
 func (i Identity) Refresh(ctx context.Context, token string) (application.Credentials, error) {
@@ -250,7 +256,16 @@ func (i Identity) Refresh(ctx context.Context, token string) (application.Creden
 	if err != nil {
 		return application.Credentials{}, authErr(err)
 	}
-	return application.Credentials{Token: string(tok), ExpiresAt: s.ExpiresAt}, nil
+	return i.credentials(s, tok), nil
+}
+
+// credentials pairs a session (refresh) token with a fresh access token, when enabled.
+func (i Identity) credentials(s *guard.Session, tok guard.SessionToken) application.Credentials {
+	c := application.Credentials{Token: string(tok), ExpiresAt: s.ExpiresAt}
+	if a, claims, ok := i.G.IssueAccess(s); ok {
+		c.Access, c.AccessExpiresAt = string(a), claims.ExpiresAt
+	}
+	return c
 }
 
 func (i Identity) Logout(ctx context.Context, token string, m application.Meta) error {
@@ -315,7 +330,7 @@ func (i Identity) StartSession(ctx context.Context, userID int, m application.Me
 	if err != nil {
 		return application.Credentials{}, err
 	}
-	return application.Credentials{Token: string(tok), ExpiresAt: s.ExpiresAt}, nil
+	return i.credentials(s, tok), nil
 }
 
 func (i Identity) Sessions(ctx context.Context, userID int) ([]application.SessionInfo, error) {

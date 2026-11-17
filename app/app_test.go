@@ -67,8 +67,11 @@ func start(t *testing.T, opts ...func(*config.Config)) *env {
 	must(t, err)
 
 	cfg := config.Config{
-		Env:            "dev",
-		MFAKey:         config.DevMFAKey,
+		Env:                "dev",
+		MFAKey:             config.DevMFAKey,
+		AccessTokenSecret:  config.DevAccessTokenSecret,
+		AccessTokenTTL:     3 * time.Hour,
+		SessionIdleTimeout: 720 * time.Hour, SessionAbsoluteTimeout: 720 * time.Hour,
 		UnsubscribeKey: config.DevUnsubscribeKey,
 		MigrateOnStart: true,
 		DBMaxConns:     10,
@@ -122,10 +125,11 @@ func eventually(t *testing.T, what string, cond func() bool) {
 }
 
 type client struct {
-	t     *testing.T
-	base  string
-	token string
-	user  struct{ ID int }
+	t       *testing.T
+	base    string
+	token   string
+	refresh string // the refresh token from the last session this client was built from
+	user    struct{ ID int }
 }
 
 func (e *env) anon(t *testing.T) *client { return &client{t: t, base: e.srv.URL} }
@@ -216,15 +220,16 @@ func unwrap(t *testing.T, data []byte) []byte {
 }
 
 type session struct {
-	Token string `json:"token"`
-	User  struct {
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
+	User         struct {
 		ID    int      `json:"id"`
 		Roles []string `json:"roles"`
 	} `json:"user"`
 }
 
 func (c *client) as(s session) *client {
-	n := &client{t: c.t, base: c.base, token: s.Token}
+	n := &client{t: c.t, base: c.base, token: s.Token, refresh: s.RefreshToken}
 	n.user.ID = s.User.ID
 	return n
 }
@@ -996,10 +1001,17 @@ func TestAccountLifecycle(t *testing.T) {
 	anon.do("POST", "/api/auth/register", map[string]string{"username": "ali", "email": "other@example.com", "password": "secret123"}, 409, nil)
 	anon.do("POST", "/api/auth/register", map[string]string{"username": "x1y", "email": "x@mailinator.com", "password": "secret123"}, 400, nil)
 
-	// Refresh rotates the token.
+	// Refresh rotates the refresh token and returns a new access token.
 	var s session
-	ali.do("POST", "/api/auth/refresh", nil, 200, &s)
-	ali.do("GET", "/api/me", nil, 401, nil) // old token revoked
+	if ali.refresh == "" {
+		t.Fatal("register returned no refresh token")
+	}
+	oldRefresh := ali.refresh
+	ali.do("POST", "/api/auth/refresh", map[string]string{"refresh_token": oldRefresh}, 200, &s)
+	if s.RefreshToken == "" || s.RefreshToken == oldRefresh {
+		t.Fatal("refresh token not rotated")
+	}
+	anon.do("POST", "/api/auth/refresh", map[string]string{"refresh_token": oldRefresh}, 401, nil) // a used refresh token is dead
 	ali = ali.as(s)
 	ali.do("GET", "/api/me", nil, 200, nil)
 

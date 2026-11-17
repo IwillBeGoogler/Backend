@@ -149,22 +149,43 @@ type Meta struct {
 	LocaleSource string
 }
 
-// Session is a logged-in session: send Token as "Authorization: Bearer".
+// Session is a logged-in session: send AccessToken as "Authorization: Bearer"
+// until ExpiresAt, then trade RefreshToken (valid until RefreshExpiresAt) at
+// POST /api/auth/refresh for a new pair.
 //
 // With two-factor authentication on, login returns only MFARequired and
 // MFAToken; POST /api/auth/login/2fa with the token and a code finishes it.
 type Session struct {
-	Token       string    `json:"token,omitempty"`
-	ExpiresAt   time.Time `json:"expires_at,omitzero"`
-	User        user.User `json:"user,omitzero"`
-	MFARequired bool      `json:"mfa_required,omitempty"`
-	MFAToken    string    `json:"mfa_token,omitempty"`
+	AccessToken string `json:"access_token,omitempty"`
+	// Token repeats AccessToken for clients written before access tokens.
+	Token            string    `json:"token,omitempty"`
+	TokenType        string    `json:"token_type,omitempty"`
+	ExpiresAt        time.Time `json:"expires_at,omitzero"`
+	RefreshExpiresAt time.Time `json:"refresh_expires_at,omitzero"`
+	RefreshToken     string    `json:"refresh_token,omitempty"`
+	User             user.User `json:"user,omitzero"`
+	MFARequired      bool      `json:"mfa_required,omitempty"`
+	MFAToken         string    `json:"mfa_token,omitempty"`
 }
 
-// Credentials is a session token as issued by the identity provider.
+// Credentials are what the identity provider issues at login and refresh:
+// the session (refresh) token and, when enabled, a short-lived access token.
 type Credentials struct {
-	Token     string
-	ExpiresAt time.Time
+	Token           string    // session token: the refresh token
+	ExpiresAt       time.Time // session expiry
+	Access          string    // access token; empty when the provider has none
+	AccessExpiresAt time.Time
+}
+
+// NewSession turns credentials into the session handed to a client. Without
+// an access token the session token itself is the bearer (and no cookie).
+func NewSession(c Credentials, u user.User) Session {
+	if c.Access == "" {
+		return Session{AccessToken: c.Token, Token: c.Token, TokenType: "Bearer", ExpiresAt: c.ExpiresAt,
+			RefreshExpiresAt: c.ExpiresAt, User: u}
+	}
+	return Session{AccessToken: c.Access, Token: c.Access, TokenType: "Bearer", ExpiresAt: c.AccessExpiresAt,
+		RefreshExpiresAt: c.ExpiresAt, RefreshToken: c.Token, User: u}
 }
 
 // Identity is the credential and session store (Guard).

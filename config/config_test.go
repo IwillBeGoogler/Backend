@@ -8,11 +8,12 @@ import (
 
 func prodConfig() Config {
 	return Config{
-		Env:         "production",
-		DatabaseURL: "postgres://u:s3cret-long-password@db/blog",
-		S3SecretKey: "a-real-s3-secret-value",
-		MFAKey:      strings.Repeat("m", 32),
-		S3AccessKey: "AKIAreal0example", AuditEmailKey: strings.Repeat("ab", 32),
+		Env:               "production",
+		DatabaseURL:       "postgres://u:s3cret-long-password@db/blog",
+		S3SecretKey:       "a-real-s3-secret-value",
+		MFAKey:            strings.Repeat("m", 32),
+		AccessTokenSecret: strings.Repeat("t", 32),
+		S3AccessKey:       "AKIAreal0example", AuditEmailKey: strings.Repeat("ab", 32),
 
 		MQTTURL: "tcp://emqx:1883", MQTTPassword: strings.Repeat("p", 32), MQTTInternalSecret: strings.Repeat("s", 32),
 	}
