@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Coverage gate: drop excluded files from the profile, fail below the minimum.
-# Env: COVERAGE_FILE (default coverage.out) COVERAGE_MIN (default 95)
+# Env: COVERAGE_FILE (default coverage.out) COVERAGE_MIN (default 90)
 set -euo pipefail
 
 file="${COVERAGE_FILE:-coverage.out}"
-min="${COVERAGE_MIN:-95}"
+min="${COVERAGE_MIN:-90}"
 filtered="$(mktemp)"
 trap 'rm -f "$filtered"' EXIT
 

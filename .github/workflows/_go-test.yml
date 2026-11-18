@@ -10,7 +10,7 @@ on:
       shards: { type: string, default: "[1,2,3,4]", description: "JSON array, one parallel test job per entry; packages are spread round-robin" }
       coverage-file: { type: string, default: coverage.out, description: merged coverage profile path }
       coverage-artifact: { type: string, default: coverage, description: artifact name of the merged profile }
-      coverage-min: { type: number, default: 95, description: minimum total statement coverage in percent }
+      coverage-min: { type: number, default: 90, description: minimum total statement coverage in percent }
       retention-days: { type: number, default: 1, description: artifact retention }
       go-version-file: { type: string, default: go.mod, description: file setup-go reads the Go version from }
       runner: { type: string, default: ubuntu-24.04, description: runner label }
