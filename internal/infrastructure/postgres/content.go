@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -199,6 +200,47 @@ func (r *SeriesRepo) SetPosts(ctx context.Context, id, ownerID int, postIDs []in
 type DiscoveryRepo struct{ db *pgxpool.Pool }
 
 func NewDiscoveryRepo(db *pgxpool.Pool) *DiscoveryRepo { return &DiscoveryRepo{db: db} }
+
+// ReadingPath walks the topic tree: posts of sibling categories (same
+// parent) ordered by category position, then publish time. prev is the
+// nearest earlier post, next the nearest later one.
+func (r *DiscoveryRepo) ReadingPath(ctx context.Context, postID int) (int, int, error) {
+	var prev, next *int
+	err := r.db.QueryRow(ctx, `WITH src AS (
+			SELECT p.id, c.parent_id, c.position AS cpos, COALESCE(p.published_at, p.created_at) AS at
+			FROM posts p JOIN categories c ON c.id = p.category_id WHERE p.id = $1),
+		cand AS (
+			SELECT p.id, c.position AS cpos, COALESCE(p.published_at, p.created_at) AS at
+			FROM posts p JOIN categories c ON c.id = p.category_id, src
+			WHERE p.status = 'published' AND p.id <> src.id
+			  AND c.parent_id IS NOT DISTINCT FROM src.parent_id
+			  AND (p.user_id IS NULL OR p.user_id NOT IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)))
+		SELECT
+			(SELECT cand.id FROM cand, src WHERE (cand.cpos, cand.at, cand.id) < (src.cpos, src.at, src.id)
+				ORDER BY cand.cpos DESC, cand.at DESC, cand.id DESC LIMIT 1),
+			(SELECT cand.id FROM cand, src WHERE (cand.cpos, cand.at, cand.id) > (src.cpos, src.at, src.id)
+				ORDER BY cand.cpos, cand.at, cand.id LIMIT 1)`, postID).Scan(&prev, &next)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, 0, nil
+	}
+	deref := func(p *int) int {
+		if p == nil {
+			return 0
+		}
+		return *p
+	}
+	return deref(prev), deref(next), err
+}
+
+// Chronological orders ids by publish time, unpublished last, then id.
+func (r *DiscoveryRepo) Chronological(ctx context.Context, ids []int) ([]int, error) {
+	rows, err := r.db.Query(ctx, `SELECT id FROM posts WHERE id = ANY($1)
+		ORDER BY published_at NULLS LAST, created_at, id`, ids)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[int])
+}
 
 // RelatedPosts scores published posts by shared tags (2 each), same
 // category (1) and same author (1), newest first on ties.

@@ -264,6 +264,11 @@ type Discovery interface {
 	// ForYou returns ids of published posts ranked for userID's home feed.
 	// total counts every candidate (0 on a page past the end).
 	ForYou(ctx context.Context, userID, limit, offset int) (ids []int, total int, err error)
+	// ReadingPath returns the published posts just before and after postID
+	// in the topic tree (0 when none).
+	ReadingPath(ctx context.Context, postID int) (prev, next int, err error)
+	// Chronological orders post ids oldest published first, drafts last.
+	Chronological(ctx context.Context, ids []int) ([]int, error)
 }
 
 // Imported is a story read from a web page, its body as Markdown.

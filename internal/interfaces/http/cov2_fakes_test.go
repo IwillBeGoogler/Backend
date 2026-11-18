@@ -767,6 +767,16 @@ func (f *zDisc) ForYou(ctx context.Context, userID int, limit int, offset int) (
 	return
 }
 
+func (f *zDisc) ReadingPath(ctx context.Context, postID int) (r0 int, r1 int, r2 error) {
+	r2 = f.c.err
+	return
+}
+
+func (f *zDisc) Chronological(ctx context.Context, ids []int) (r0 []int, r1 error) {
+	r0, r1 = ids, f.c.err
+	return
+}
+
 type zAuthz struct{ c *zctl }
 
 func (f *zAuthz) Can(ctx context.Context, resource string, action string, id int, ownerID int) (r0 error) {

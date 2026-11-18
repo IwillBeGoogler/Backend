@@ -8,7 +8,8 @@ import (
 )
 
 type seriesPostsInput struct {
-	PostIDs []int `json:"post_ids"` // in reading order
+	PostIDs   []int `json:"post_ids"`   // in reading order
+	AutoOrder bool  `json:"auto_order"` // sort by publish time instead
 }
 
 func pathVersion(w http.ResponseWriter, r *http.Request) (int, bool) {
@@ -170,6 +171,14 @@ func (h *Handler) setSeriesPosts(w http.ResponseWriter, r *http.Request) {
 	_, ok := h.requireUser(w, r)
 	var in seriesPostsInput
 	if ok && decode(w, r, &in) {
+		if in.AutoOrder {
+			ids, err := h.Blog.SortSeriesPosts(r.Context(), in.PostIDs)
+			if err != nil {
+				respond(w, r, http.StatusOK, nil, err, "series not found")
+				return
+			}
+			in.PostIDs = ids
+		}
 		d, err := h.Blog.SetSeriesPosts(r.Context(), r.PathValue("slug"), in.PostIDs)
 		respond(w, r, http.StatusOK, d, err, "series not found")
 	}
@@ -196,6 +205,21 @@ func (h *Handler) postSeries(w http.ResponseWriter, r *http.Request) {
 	if id, ok := pathID(w, r); ok {
 		n, err := h.Blog.PostSeries(r.Context(), id, h.viewerID(r))
 		respond(w, r, http.StatusOK, n, err, "not in a series")
+	}
+}
+
+// readingPath is what to read before and after a post.
+//
+// Series neighbours when the post is in a series (source "series"), else
+// the nearest published posts in sibling topics of the category tree
+// (source "topic"). prev/next are null when none.
+// Auth: optional.
+//
+// spector:tags posts
+func (h *Handler) readingPath(w http.ResponseWriter, r *http.Request) {
+	if id, ok := pathID(w, r); ok {
+		p, err := h.Blog.ReadingPath(r.Context(), id, h.viewerID(r))
+		respond(w, r, http.StatusOK, p, err, "post not found")
 	}
 }
 

@@ -396,6 +396,79 @@ func (b *Blog) PostSeries(ctx context.Context, postID, viewerID int) (series.Nav
 	return n, nil
 }
 
+// ReadingPath is what to read before and after a post: its series
+// neighbours when it is in one, else its neighbours in the topic tree.
+type ReadingPath struct {
+	Source string     `json:"source"` // "series", "topic" or "" when none
+	Prev   *post.Post `json:"prev"`
+	Next   *post.Post `json:"next"`
+}
+
+func (b *Blog) ReadingPath(ctx context.Context, postID, viewerID int) (ReadingPath, error) {
+	ctx, span := tracer.Start(ctx, "Blog.ReadingPath")
+	defer span.End()
+	if _, err := b.readable(ctx, postID, viewerID); err != nil {
+		return ReadingPath{}, err
+	}
+	var prevID, nextID int
+	source := "series"
+	n, err := b.PostSeries(ctx, postID, viewerID)
+	switch {
+	case err == nil:
+		if n.Prev != nil {
+			prevID = n.Prev.PostID
+		}
+		if n.Next != nil {
+			nextID = n.Next.PostID
+		}
+	case errors.Is(err, domain.ErrNotFound):
+		source = "topic"
+		if prevID, nextID, err = b.Discovery.ReadingPath(ctx, postID); err != nil {
+			return ReadingPath{}, err
+		}
+	default:
+		return ReadingPath{}, err
+	}
+	ids := make([]int, 0, 2)
+	for _, id := range []int{prevID, nextID} {
+		if id != 0 {
+			ids = append(ids, id)
+		}
+	}
+	out := ReadingPath{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	posts, err := b.Posts.ListByIDs(ctx, ids)
+	if err != nil {
+		return out, err
+	}
+	for i := range posts {
+		switch posts[i].ID {
+		case prevID:
+			out.Prev = &posts[i]
+		case nextID:
+			out.Next = &posts[i]
+		}
+	}
+	if out.Prev != nil || out.Next != nil {
+		out.Source = source
+	}
+	return out, nil
+}
+
+// SortSeriesPosts orders post ids oldest published first (auto order).
+func (b *Blog) SortSeriesPosts(ctx context.Context, postIDs []int) ([]int, error) {
+	if len(postIDs) < 2 {
+		return postIDs, nil
+	}
+	sorted, err := b.Discovery.Chronological(ctx, postIDs)
+	if err != nil || len(sorted) != len(postIDs) {
+		return postIDs, err // unknown ids: SetSeriesPosts rejects them
+	}
+	return sorted, nil
+}
+
 // Recommendations
 
 // RelatedPosts are published posts sharing tags or the category.

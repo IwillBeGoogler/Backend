@@ -116,6 +116,7 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/posts/{id}/translations/{lang}", h.saveTranslation)
 	mux.HandleFunc("DELETE /api/posts/{id}/translations/{lang}", h.deleteTranslation)
 	mux.HandleFunc("GET /api/posts/{id}/related", h.relatedPosts)
+	mux.HandleFunc("GET /api/posts/{id}/reading-path", h.readingPath)
 	mux.HandleFunc("GET /api/posts/{id}/series", h.postSeries)
 	mux.HandleFunc("GET /api/posts/{id}/revisions", h.listRevisions)
 	mux.HandleFunc("GET /api/posts/{id}/revisions/{version}", h.getRevision)
