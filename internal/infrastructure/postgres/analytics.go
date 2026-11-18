@@ -102,7 +102,70 @@ func (r *AnalyticsRepo) Report(ctx context.Context, since time.Time, days int) (
 	}
 	rep.Languages, err = r.counts(ctx, `SELECT COALESCE(NULLIF(lang, ''), '?'), count(DISTINCT `+who+`) FROM analytics_events
 		WHERE name = 'page_view' AND at >= $1 GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 10`, since)
+	if err != nil {
+		return rep, err
+	}
+	if rep.Referrers, err = r.counts(ctx, `SELECT referrer, count(DISTINCT `+who+`) FROM analytics_events
+		WHERE name = 'page_view' AND referrer <> '' AND at >= $1 GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 10`, since); err != nil {
+		return rep, err
+	}
+	if rep.Heatmap, err = r.heatmap(ctx, since); err != nil {
+		return rep, err
+	}
+	rep.Cohorts, err = r.cohorts(ctx, since)
 	return rep, err
+}
+
+func (r *AnalyticsRepo) heatmap(ctx context.Context, since time.Time) ([]application.HeatCell, error) {
+	rows, err := r.db.Query(ctx, `SELECT extract(dow FROM at AT TIME ZONE 'UTC')::int, extract(hour FROM at AT TIME ZONE 'UTC')::int, count(*)
+		FROM analytics_events WHERE name = 'page_view' AND at >= $1 GROUP BY 1, 2 ORDER BY 1, 2`, since)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[application.HeatCell])
+}
+
+// maxCohortWeeks bounds the retention table width.
+const maxCohortWeeks = 12
+
+// cohorts groups signups by week and, per cohort, the share of users seen in
+// each following week. Offsets that lie in the future are dropped.
+func (r *AnalyticsRepo) cohorts(ctx context.Context, since time.Time) ([]application.CohortRow, error) {
+	rows, err := r.db.Query(ctx, `WITH c AS (
+			SELECT id, date_trunc('week', created_at AT TIME ZONE 'UTC')::date AS w FROM users WHERE created_at >= $1),
+		a AS (SELECT DISTINCT user_id, date_trunc('week', at AT TIME ZONE 'UTC')::date AS w FROM analytics_events
+			WHERE user_id IS NOT NULL AND at >= $1),
+		sz AS (SELECT w, count(*) AS n FROM c GROUP BY w)
+		SELECT to_char(sz.w, 'YYYY-MM-DD'), sz.n::int, COALESCE((a.w - sz.w) / 7, -1), count(DISTINCT c.id)::int
+		FROM sz
+		LEFT JOIN c ON c.w = sz.w
+		LEFT JOIN a ON a.user_id = c.id AND a.w >= c.w AND (a.w - c.w) / 7 < $2
+		GROUP BY sz.w, sz.n, 3 ORDER BY sz.w, 3`, since, maxCohortWeeks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	now := time.Now().UTC()
+	thisWeek := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	thisWeek = thisWeek.AddDate(0, 0, -((int(thisWeek.Weekday()) + 6) % 7))
+	var out []application.CohortRow
+	for rows.Next() {
+		var week string
+		var size, k, active int
+		if err := rows.Scan(&week, &size, &k, &active); err != nil {
+			return nil, err
+		}
+		if len(out) == 0 || out[len(out)-1].Week != week {
+			start, _ := time.Parse("2006-01-02", week)
+			span := min(int(thisWeek.Sub(start).Hours()/24/7)+1, maxCohortWeeks)
+			out = append(out, application.CohortRow{Week: week, Size: size, Retained: make([]float64, max(span, 1))})
+		}
+		row := &out[len(out)-1]
+		if k >= 0 && k < len(row.Retained) {
+			row.Retained[k] = share(active, size)
+		}
+	}
+	return out, rows.Err()
 }
 
 // series fills every day from since to today, zero where q has no row.

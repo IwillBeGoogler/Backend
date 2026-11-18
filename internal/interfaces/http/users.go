@@ -76,7 +76,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 // login returns an access token for a username or email and password.
 //
 // Send access_token as Authorization: Bearer <token> until expires_at
-// (ACCESS_TOKEN_TTL, 3 hours). refresh_token, valid until refresh_expires_at,
+// (ACCESS_TOKEN_TTL, 1 hour). refresh_token, valid until refresh_expires_at,
 // goes to POST /api/auth/refresh for a new pair. The refresh token ends after SESSION_IDLE_TIMEOUT without a refresh
 // and at the latest SESSION_ABSOLUTE_TIMEOUT (30 days) after login; an
 // expired one needs a new login. Logging in to an

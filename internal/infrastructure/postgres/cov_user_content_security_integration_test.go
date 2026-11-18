@@ -809,7 +809,7 @@ func TestCovUCSPublicationsAndModeration(t *testing.T) {
 		p := covUCSPost(t, posts, "covucs analytics", a)
 		evs := []application.AnalyticsEvent{
 			{Name: "page_view", Visitor: "v1", Path: "/", Lang: "en"},
-			{Name: "page_view", Visitor: "v2", Path: "/", Lang: ""},
+			{Name: "page_view", Visitor: "v2", Path: "/", Lang: "", Referrer: "news.example.com"},
 			{Name: "page_view", Visitor: "v1", UserID: a.ID, Path: "/p", PostID: p.ID, Lang: "uz"},
 			{Name: "signup_open", Visitor: "v1"},
 			{Name: "signup", Visitor: "v1", UserID: a.ID},
@@ -833,6 +833,29 @@ func TestCovUCSPublicationsAndModeration(t *testing.T) {
 		}
 		if rep.Retention.Cohort < 1 {
 			t.Errorf("retention = %+v", rep.Retention)
+		}
+		if len(rep.Referrers) != 1 || rep.Referrers[0].Key != "news.example.com" {
+			t.Errorf("referrers = %+v", rep.Referrers)
+		}
+		views := 0
+		for _, c := range rep.Heatmap {
+			if c.Dow < 0 || c.Dow > 6 || c.Hour < 0 || c.Hour > 23 {
+				t.Errorf("heat cell out of range: %+v", c)
+			}
+			views += c.Count
+		}
+		if views != 3 {
+			t.Errorf("heatmap views = %d, want 3", views)
+		}
+		if len(rep.Cohorts) == 0 || rep.Cohorts[len(rep.Cohorts)-1].Size < 1 || len(rep.Cohorts[len(rep.Cohorts)-1].Retained) == 0 {
+			t.Errorf("cohorts = %+v", rep.Cohorts)
+		}
+		for _, c := range rep.Cohorts {
+			for _, v := range c.Retained {
+				if v < 0 || v > 1 {
+					t.Errorf("retained share out of range: %+v", c)
+				}
+			}
 		}
 		n, err := an.PurgeBefore(ctx, time.Now().Add(time.Hour))
 		if err != nil || n != int64(len(evs)) {

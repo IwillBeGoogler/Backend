@@ -99,7 +99,7 @@ type Config struct {
 	// returns a new access token. The session (refresh token) ends after
 	// SESSION_IDLE_TIMEOUT without a refresh and at the latest
 	// SESSION_ABSOLUTE_TIMEOUT after login; an expired one needs a new login.
-	AccessTokenTTL            time.Duration `env:"ACCESS_TOKEN_TTL" default:"3h" desc:"access token lifetime (min 1m, shorter than SESSION_IDLE_TIMEOUT)"`
+	AccessTokenTTL            time.Duration `env:"ACCESS_TOKEN_TTL" default:"1h" desc:"access token lifetime (min 1m, shorter than SESSION_IDLE_TIMEOUT)"`
 	AccessTokenSecret         string        `env:"ACCESS_TOKEN_SECRET,secret" desc:"HMAC key (>= 32 characters) signing access tokens: openssl rand -hex 32"`
 	AccessTokenPreviousSecret string        `env:"ACCESS_TOKEN_PREVIOUS_SECRET,secret" desc:"previous ACCESS_TOKEN_SECRET, still accepted during a rotation (one ACCESS_TOKEN_TTL)"`
 	SessionIdleTimeout        time.Duration `env:"SESSION_IDLE_TIMEOUT" default:"720h" desc:"refresh token: end the session after this long without a refresh (min 1m)"`

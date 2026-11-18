@@ -77,12 +77,30 @@ type AnalyticsReport struct {
 	Retention      Retention    `json:"retention"`
 	TopPaths       []PathCount  `json:"top_paths"`
 	Languages      []PathCount  `json:"languages"`
+	Referrers      []PathCount  `json:"referrers"` // referring hosts of page views
+	Heatmap        []HeatCell   `json:"heatmap"`   // page views by weekday x hour (UTC)
+	Cohorts        []CohortRow  `json:"cohorts"`   // weekly signup cohorts and their weekly retention
 }
 
 // PathCount is a page or language with its distinct visitors.
 type PathCount struct {
 	Key   string `json:"key"`
 	Count int    `json:"count"`
+}
+
+// HeatCell is page views at one weekday (0 = Sunday) and UTC hour.
+type HeatCell struct {
+	Dow   int `json:"dow"`
+	Hour  int `json:"hour"`
+	Count int `json:"count"`
+}
+
+// CohortRow is one signup week: its size and the share active in week 0, 1, 2...
+// after signup. Weeks that have not happened yet are left out.
+type CohortRow struct {
+	Week     string    `json:"week"` // Monday, YYYY-MM-DD
+	Size     int       `json:"size"`
+	Retained []float64 `json:"retained"`
 }
 
 // AnalyticsRepo stores and aggregates events.
