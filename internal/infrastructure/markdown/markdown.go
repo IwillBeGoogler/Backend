@@ -62,7 +62,7 @@ func HasDiagramEmbed(body string) bool { return strings.Contains(body, "::diagra
 
 func New() *Renderer {
 	md := goldmark.New(
-		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote, extension.DefinitionList),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(util.Prioritized(codeTabsTransformer{}, 500)),
@@ -76,7 +76,16 @@ func New() *Renderer {
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("id").Matching(regexp.MustCompile(`^[a-z0-9-]+$`)).OnElements("h1", "h2", "h3", "h4", "h5", "h6")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^language-[\w+-]+$`)).OnElements("code")
-	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(embed|code-tabs)$`)).OnElements("div")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(embed|code-tabs|footnotes|math-block)$`)).OnElements("div")
+	// math: the TeX rides in data-tex and is typeset by the client (see math.go).
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^math-(inline|block)$`)).OnElements("span")
+	// task list boxes: read-only checkboxes and nothing else an input can be
+	p.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
+	p.AllowAttrs("checked", "disabled").OnElements("input")
+	// footnotes
+	p.AllowAttrs("id").Matching(regexp.MustCompile(`^(fn|fnref):[\w:-]+$`)).OnElements("sup", "li")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^footnote-(ref|backref)$`)).OnElements("a")
+	p.AllowAttrs("role").Matching(regexp.MustCompile(`^doc-(noteref|endnotes|backlink)$`)).OnElements("a", "div")
 	// ::diagram embeds: <figure class="diagram-embed" data-file data-page>.
 	p.AllowElements("figure", "figcaption")
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^diagram-embed$`)).OnElements("figure")
@@ -123,6 +132,7 @@ var (
 // to get one.
 func (r *Renderer) Render(body string) string {
 	body, live := extractLive(body)
+	body, maths := extractMath(body)
 	var out bytes.Buffer
 	if err := r.md.Convert([]byte(r.diagramEmbeds(embeds(body))), &out); err != nil {
 		return ""
@@ -135,6 +145,7 @@ func (r *Renderer) Render(body string) string {
 	if len(live) > 0 {
 		s = liveToken.ReplaceAllString(s, "")
 	}
+	s = restoreMath(s, maths)
 	return s
 }
 

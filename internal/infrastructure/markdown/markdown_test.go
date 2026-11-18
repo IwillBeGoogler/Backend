@@ -215,3 +215,46 @@ func TestCodeTabs(t *testing.T) {
 	}
 	ct.Dump([]byte("src"), 0)
 }
+
+func TestRenderMath(t *testing.T) {
+	r := New()
+	cases := []struct{ name, in, want string }{
+		{"inline", "a $x^2$ b", `<span class="math-inline" data-tex="x^2">$x^2$</span>`},
+		{"block", "$$\n\\int_0^1 x\\,dx\n$$", `<div class="math-block" data-tex="\int_0^1 x\,dx">`},
+		{"one line block", "$$a<b$$", `data-tex="a&lt;b"`},
+		{"money untouched", "costs $5 and $6 today", "costs $5 and $6 today"},
+		{"code untouched", "`$x$`", "<code>$x$</code>"},
+		{"fence untouched", "```\n$$\nx\n$$\n```", "$$\nx\n$$"},
+		{"escaped dollar", `\$x\$`, "$x$"},
+	}
+	for _, c := range cases {
+		if got := r.Render(c.in); !strings.Contains(got, c.want) {
+			t.Errorf("%s: Render(%q) = %q, want it to contain %q", c.name, c.in, got, c.want)
+		}
+	}
+	got := r.Render("$$<script>alert(1)</script>$$")
+	if strings.Contains(got, "<script>") {
+		t.Errorf("script leaked: %q", got)
+	}
+	if got := r.Render("`$x$` and $y$"); strings.Contains(got, `data-tex="x"`) {
+		t.Errorf("math inside code: %q", got)
+	}
+}
+
+func TestRenderExtras(t *testing.T) {
+	r := New()
+	cases := []struct{ name, in, want string }{
+		{"footnote ref", "Text[^1]\n\n[^1]: Note.", `href="#fn:1"`},
+		{"footnote id", "Text[^1]\n\n[^1]: Note.", `id="fn:1"`},
+		{"footnote list", "Text[^1]\n\n[^1]: Note.", `class="footnotes"`},
+		{"definition list", "Term\n: Meaning", "<dl>"},
+		{"task list", "- [x] done", `type="checkbox"`},
+		{"strikethrough", "~~x~~", "<del>x</del>"},
+		{"table", "|a|b|\n|-|-|\n|1|2|", "<table>"},
+	}
+	for _, c := range cases {
+		if got := r.Render(c.in); !strings.Contains(got, c.want) {
+			t.Errorf("%s: Render(%q) = %q, want it to contain %q", c.name, c.in, got, c.want)
+		}
+	}
+}
