@@ -109,15 +109,40 @@ func (h *Handler) getSeries(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, d, err, "series not found")
 }
 
-// updateSeries changes a series' title and description.
+// recentSeries lists series with at least two published parts, newest
+// activity first, each with its published parts in order.
 //
+// ?limit= 1-24 (default 8).
+// Auth: none.
+//
+// spector:tags series
+func (h *Handler) recentSeries(w http.ResponseWriter, r *http.Request) {
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil {
+		limit = 8
+	}
+	list, err := h.Blog.RecentSeries(r.Context(), limit)
+	respond(w, r, http.StatusOK, list, err, "")
+}
+
+// updateSeries changes a series' title, description and cover.
+//
+// Fields left out of the body keep their current values.
 // Auth: series author or post.update.
 //
 // spector:tags series
 func (h *Handler) updateSeries(w http.ResponseWriter, r *http.Request) {
 	_, ok := h.requireUser(w, r)
-	var in series.SeriesInput
-	if ok && decode(w, r, &in) {
+	if !ok {
+		return
+	}
+	cur, err := h.Blog.GetSeries(r.Context(), r.PathValue("slug"), 0)
+	if err != nil {
+		respond(w, r, 0, nil, err, "series not found")
+		return
+	}
+	in := series.SeriesInput{Title: cur.Title, Description: cur.Description, CoverURL: cur.CoverURL}
+	if decode(w, r, &in) {
 		s, err := h.Blog.UpdateSeries(r.Context(), r.PathValue("slug"), in)
 		respond(w, r, http.StatusOK, s, err, "series not found")
 	}

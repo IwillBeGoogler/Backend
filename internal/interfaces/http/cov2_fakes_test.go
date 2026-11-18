@@ -622,6 +622,11 @@ func (f *zSeries) OfPost(ctx context.Context, postID int) (r0 series.Series, r1 
 	return
 }
 
+func (f *zSeries) Recent(ctx context.Context, minParts, limit int) (r0 []series.Series, r1 error) {
+	r1 = f.c.err
+	return
+}
+
 type zLists struct{ c *zctl }
 
 func (f *zLists) Create(ctx context.Context, userID int, slug string, in readinglist.ListInput) (r0 readinglist.List, r1 error) {

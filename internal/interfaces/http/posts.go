@@ -398,3 +398,57 @@ func (h *Handler) myTags(w http.ResponseWriter, r *http.Request) {
 		respond(w, r, http.StatusOK, t, err, "")
 	}
 }
+
+const translationNotFound = "translation not found"
+
+// getTranslation returns a post's translation in one language.
+//
+// lang is uz, ru or en and differs from the post's original language. Same
+// visibility rules as GET /api/posts/{id}; body_html is sanitized HTML.
+// Auth: optional.
+//
+// spector:tags posts
+func (h *Handler) getTranslation(w http.ResponseWriter, r *http.Request) {
+	if id, ok := pathID(w, r); ok {
+		t, err := h.Blog.GetTranslation(r.Context(), id, h.viewerID(r), r.PathValue("lang"))
+		respond(w, r, http.StatusOK, t, err, translationNotFound)
+	}
+}
+
+// saveTranslation creates or replaces a translation of a post.
+//
+// Body is {title, subtitle, body}; title is required. The original language
+// cannot be translated. Rate limit: 30 per minute.
+// Auth: the author (ABAC policy) or post.update.
+//
+// spector:tags posts
+func (h *Handler) saveTranslation(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.requireUser(w, r)
+	if !ok || !h.allow(w, r, "post", 30, time.Minute) {
+		return
+	}
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	var in post.TranslationInput
+	if decode(w, r, &in) {
+		t, err := h.Blog.SaveTranslation(r.Context(), actor, id, r.PathValue("lang"), in)
+		respond(w, r, http.StatusOK, t, err, postNotFound)
+	}
+}
+
+// deleteTranslation removes a translation of a post.
+//
+// Auth: the author (ABAC policy) or post.update.
+//
+// spector:tags posts
+func (h *Handler) deleteTranslation(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.requireUser(w, r)
+	if !ok {
+		return
+	}
+	if id, ok := pathID(w, r); ok {
+		noContent(w, r, h.Blog.DeleteTranslation(r.Context(), actor, id, r.PathValue("lang")), translationNotFound)
+	}
+}

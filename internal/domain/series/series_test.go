@@ -63,3 +63,18 @@ func TestValidateOrder(t *testing.T) {
 		t.Fatal("nil err")
 	}
 }
+
+func TestSeriesInputCover(t *testing.T) {
+	for _, c := range []struct {
+		url string
+		ok  bool
+	}{{"", true}, {"/api/uploads/x.png", true}, {" https://a.b/c.jpg ", true}, {"javascript:alert(1)", false}, {"ftp://x", false}} {
+		in, err := SeriesInput{Title: "T", CoverURL: c.url}.Normalize()
+		if (err == nil) != c.ok {
+			t.Errorf("%q: err=%v", c.url, err)
+		}
+		if err == nil && strings.Contains(in.CoverURL, " ") {
+			t.Errorf("%q not trimmed", c.url)
+		}
+	}
+}

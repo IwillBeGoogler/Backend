@@ -69,20 +69,20 @@ type SeriesRepo struct{ db *pgxpool.Pool }
 
 func NewSeriesRepo(db *pgxpool.Pool) *SeriesRepo { return &SeriesRepo{db: db} }
 
-const seriesCols = `s.id, s.slug, s.title, s.description, s.user_id, u.username,
+const seriesCols = `s.id, s.slug, s.title, s.description, s.user_id, u.username, s.cover_url,
 	(SELECT count(*) FROM series_posts sp JOIN posts p ON p.id = sp.post_id WHERE sp.series_id = s.id AND p.status = 'published'),
 	s.created_at, s.updated_at`
 
 func scanSeries(row pgx.Row) (series.Series, error) {
 	var s series.Series
-	err := row.Scan(&s.ID, &s.Slug, &s.Title, &s.Description, &s.UserID, &s.Author, &s.Parts, &s.CreatedAt, &s.UpdatedAt)
+	err := row.Scan(&s.ID, &s.Slug, &s.Title, &s.Description, &s.UserID, &s.Author, &s.CoverURL, &s.Parts, &s.CreatedAt, &s.UpdatedAt)
 	return s, notFound(err)
 }
 
 func (r *SeriesRepo) Create(ctx context.Context, userID int, slug string, in series.SeriesInput) (series.Series, error) {
 	var id int
-	err := r.db.QueryRow(ctx, `INSERT INTO series (user_id, slug, title, description) VALUES ($1, $2, $3, $4) RETURNING id`,
-		userID, slug, in.Title, in.Description).Scan(&id)
+	err := r.db.QueryRow(ctx, `INSERT INTO series (user_id, slug, title, description, cover_url) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		userID, slug, in.Title, in.Description, in.CoverURL).Scan(&id)
 	if pgCode(err) == pgUniqueViolation {
 		return series.Series{}, domain.ErrConflict
 	}
@@ -93,8 +93,8 @@ func (r *SeriesRepo) Create(ctx context.Context, userID int, slug string, in ser
 }
 
 func (r *SeriesRepo) Update(ctx context.Context, id int, in series.SeriesInput) (series.Series, error) {
-	if err := execOne(ctx, r.db, `UPDATE series SET title = $2, description = $3, updated_at = now() WHERE id = $1`,
-		id, in.Title, in.Description); err != nil {
+	if err := execOne(ctx, r.db, `UPDATE series SET title = $2, description = $3, cover_url = $4, updated_at = now() WHERE id = $1`,
+		id, in.Title, in.Description, in.CoverURL); err != nil {
 		return series.Series{}, err
 	}
 	return r.get(ctx, `s.id = $1`, id)
@@ -119,6 +119,17 @@ func (r *SeriesRepo) get(ctx context.Context, where string, key any) (series.Ser
 func (r *SeriesRepo) ByUser(ctx context.Context, userID int) ([]series.Series, error) {
 	rows, err := r.db.Query(ctx, `SELECT `+seriesCols+` FROM series s JOIN users u ON u.id = s.user_id
 		WHERE s.user_id = $1 ORDER BY s.created_at DESC, s.id DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (series.Series, error) { return scanSeries(row) })
+}
+
+func (r *SeriesRepo) Recent(ctx context.Context, minParts, limit int) ([]series.Series, error) {
+	rows, err := r.db.Query(ctx, `SELECT `+seriesCols+` FROM series s JOIN users u ON u.id = s.user_id
+		WHERE u.deleted_at IS NULL AND (SELECT count(*) FROM series_posts sp JOIN posts p ON p.id = sp.post_id
+			WHERE sp.series_id = s.id AND p.status = 'published') >= $1
+		ORDER BY s.updated_at DESC, s.id DESC LIMIT $2`, minParts, limit)
 	if err != nil {
 		return nil, err
 	}

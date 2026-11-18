@@ -42,6 +42,7 @@ type StatsReader interface {
 // Repos groups the repositories Blog needs.
 type Repos struct {
 	Posts        post.Repository
+	Translations post.TranslationRepository // optional
 	Comments     comment.Repository
 	Categories   category.Repository
 	Users        user.Repository

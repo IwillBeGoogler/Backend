@@ -350,6 +350,30 @@ func (b *Blog) UserSeries(ctx context.Context, username string) ([]series.Series
 	return list, err
 }
 
+// RecentSeries lists series with at least two published parts, each with
+// its published parts, most recently updated first (for the home page).
+func (b *Blog) RecentSeries(ctx context.Context, limit int) ([]series.Detail, error) {
+	ctx, span := tracer.Start(ctx, "Blog.RecentSeries")
+	defer span.End()
+	limit = min(max(limit, 1), 24)
+	list, err := b.Series.Recent(ctx, 2, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]series.Detail, 0, len(list))
+	for _, s := range list {
+		parts, err := b.Series.Parts(ctx, s.ID, false)
+		if err != nil {
+			return nil, err
+		}
+		if parts == nil {
+			parts = []series.Part{}
+		}
+		out = append(out, series.Detail{Series: s, Posts: parts})
+	}
+	return out, nil
+}
+
 // PostSeries is a readable post's place in its series (published parts).
 func (b *Blog) PostSeries(ctx context.Context, postID, viewerID int) (series.Navigation, error) {
 	ctx, span := tracer.Start(ctx, "Blog.PostSeries")

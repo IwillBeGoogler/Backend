@@ -151,8 +151,10 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 
 	users := postgres.NewUserRepo(db)
 	md := markdown.New()
+	postRepo := postgres.NewPostRepo(db)
 	blog := application.NewBlog(application.Repos{
-		Posts:        postgres.NewPostRepo(db),
+		Posts:        postRepo,
+		Translations: postRepo,
 		Comments:     postgres.NewCommentRepo(db),
 		Categories:   postgres.NewCategoryRepo(db),
 		Users:        users,

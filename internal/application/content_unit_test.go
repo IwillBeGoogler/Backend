@@ -75,6 +75,12 @@ func (r *memSeries) ByUser(context.Context, int) ([]series.Series, error) { retu
 func (r *memSeries) Parts(context.Context, int, bool) ([]series.Part, error) {
 	return r.parts, r.err
 }
+func (r *memSeries) Recent(context.Context, int, int) ([]series.Series, error) {
+	if r.s.ID == 0 {
+		return nil, r.err
+	}
+	return []series.Series{r.s}, r.err
+}
 func (r *memSeries) SetPosts(context.Context, int, int, []int) error { return r.setErr }
 func (r *memSeries) OfPost(context.Context, int) (series.Series, error) {
 	if r.notFound {
@@ -336,4 +342,16 @@ func commentWith(id, postID int, text string) comment.Comment {
 
 func socialMention(actor int) social.Notification {
 	return social.Notification{Type: social.NotifyMention, ActorID: actor, PostID: 1}
+}
+
+func TestRecentSeries(t *testing.T) {
+	b := &Blog{Repos: Repos{Series: &memSeries{s: series.Series{ID: 3, Title: "Go"}, parts: []series.Part{{Position: 1, PostID: 7}}}}}
+	got, err := b.RecentSeries(context.Background(), 100)
+	if err != nil || len(got) != 1 || got[0].ID != 3 || len(got[0].Posts) != 1 {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+	b = &Blog{Repos: Repos{Series: &memSeries{}}}
+	if got, err := b.RecentSeries(context.Background(), 0); err != nil || len(got) != 0 {
+		t.Fatalf("empty: %+v, %v", got, err)
+	}
 }

@@ -18,6 +18,7 @@ type Series struct {
 	Description string    `json:"description"`
 	UserID      int       `json:"user_id"`
 	Author      string    `json:"author"`
+	CoverURL    string    `json:"cover_url"`
 	Parts       int       `json:"parts"` // visible to the viewer
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -68,12 +69,17 @@ func Navigate(s Series, parts []Part, postID int) (Navigation, bool) {
 type SeriesInput struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	CoverURL    string `json:"cover_url"` // from POST /api/uploads or an http(s) URL
 }
 
 func (in SeriesInput) Normalize() (SeriesInput, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.Description = strings.TrimSpace(in.Description)
+	in.CoverURL = strings.TrimSpace(in.CoverURL)
 	switch {
+	case in.CoverURL != "" && (len(in.CoverURL) > 2000 || !strings.HasPrefix(in.CoverURL, "/api/uploads/") &&
+		!strings.HasPrefix(in.CoverURL, "https://") && !strings.HasPrefix(in.CoverURL, "http://")):
+		return in, domain.Invalid("bad cover_url")
 	case in.Title == "":
 		return in, domain.Invalid("title required")
 	case len(in.Title) > 200:
@@ -118,4 +124,7 @@ type Repository interface {
 	SetPosts(ctx context.Context, id, ownerID int, postIDs []int) error
 	// OfPost returns the series a post belongs to.
 	OfPost(ctx context.Context, postID int) (Series, error)
+	// Recent lists series with at least minParts published parts by active
+	// users, most recently updated first.
+	Recent(ctx context.Context, minParts, limit int) ([]Series, error)
 }

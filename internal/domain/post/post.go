@@ -34,6 +34,8 @@ type Post struct {
 	Subtitle      string           `json:"subtitle"`
 	Slug          string           `json:"slug"`
 	Status        Status           `json:"status"`
+	Lang          string           `json:"lang"`      // original language: uz, ru or en
+	Languages     []string         `json:"languages"` // original first, then translations
 	Body          string           `json:"body"`
 	BodyHTML      string           `json:"body_html,omitempty"` // sanitized; single-post reads only
 	ReadingTime   int              `json:"reading_time"`        // minutes
@@ -70,7 +72,7 @@ func (p Post) IsReadable() bool { return p.Status == StatusPublished || p.Status
 // onto so fields the client leaves out keep their values.
 func (p Post) Draft() Draft {
 	d := Draft{
-		Title: p.Title, Subtitle: p.Subtitle, Status: p.Status, PublishAt: p.PublishAt,
+		Title: p.Title, Subtitle: p.Subtitle, Status: p.Status, Lang: p.Lang, PublishAt: p.PublishAt,
 		Body: p.Body, CategoryID: p.CategoryID, CategoryIDs: p.CategoryIDs, PublicationID: p.PublicationID,
 		CoverURL: p.CoverURL, CanonicalURL: p.CanonicalURL, Tags: p.Tags, Glossary: p.Glossary,
 	}
@@ -126,6 +128,7 @@ func NewLabel(name, color string) (Label, error) {
 
 // Draft is the editable part of a post. Empty Status means published.
 type Draft struct {
+	Lang          string           `json:"lang"` // original language; empty means uz
 	Title         string           `json:"title"`
 	Subtitle      string           `json:"subtitle"`
 	Status        Status           `json:"status"`
@@ -153,6 +156,11 @@ const (
 // Normalize validates d and cleans it up; now checks publish_at.
 func (d Draft) Normalize(now time.Time) (Draft, error) {
 	d.Title = strings.TrimSpace(d.Title)
+	if d.Lang == "" {
+		d.Lang = Langs[0]
+	} else if !ValidLang(d.Lang) {
+		return d, domain.Invalid("lang: uz, ru or en")
+	}
 	switch {
 	case d.Title == "":
 		return d, domain.Invalid("title required")
