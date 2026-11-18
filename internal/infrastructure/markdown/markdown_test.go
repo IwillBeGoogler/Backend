@@ -258,3 +258,23 @@ func TestRenderExtras(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderHighlightAndAlerts(t *testing.T) {
+	r := New()
+	cases := []struct{ name, in, want string }{
+		{"mark", "a ==b== c", "<mark>b</mark>"},
+		{"spaced equals", "a == b == c", "a == b == c"},
+		{"mark in code", "`==x==`", "<code>==x==</code>"},
+		{"alert", "> [!NOTE]\n> Careful here.", `<blockquote class="alert alert-note">`},
+		{"alert body", "> [!WARNING]\n> Careful here.", "Careful here."},
+		{"plain quote", "> hello", "<blockquote>"},
+	}
+	for _, c := range cases {
+		if got := r.Render(c.in); !strings.Contains(got, c.want) {
+			t.Errorf("%s: Render(%q) = %q, want it to contain %q", c.name, c.in, got, c.want)
+		}
+	}
+	if got := r.Render("> [!NOTE]\n> x"); strings.Contains(got, "[!NOTE]") {
+		t.Errorf("marker left in: %q", got)
+	}
+}

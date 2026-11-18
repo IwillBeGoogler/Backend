@@ -62,10 +62,10 @@ func HasDiagramEmbed(body string) bool { return strings.Contains(body, "::diagra
 
 func New() *Renderer {
 	md := goldmark.New(
-		goldmark.WithExtensions(extension.GFM, extension.Footnote, extension.DefinitionList),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote, extension.DefinitionList, highlight{}),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
-			parser.WithASTTransformers(util.Prioritized(codeTabsTransformer{}, 500)),
+			parser.WithASTTransformers(util.Prioritized(codeTabsTransformer{}, 500), util.Prioritized(alertTransformer{}, 600)),
 		),
 		// Raw HTML passes through to the sanitizer, which has the last word.
 		goldmark.WithRendererOptions(
@@ -79,6 +79,8 @@ func New() *Renderer {
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(embed|code-tabs|footnotes|math-block)$`)).OnElements("div")
 	// math: the TeX rides in data-tex and is typeset by the client (see math.go).
 	p.AllowAttrs("class").Matching(regexp.MustCompile(`^math-(inline|block)$`)).OnElements("span")
+	p.AllowElements("mark")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^alert alert-(note|tip|important|warning|caution)$`)).OnElements("blockquote")
 	// task list boxes: read-only checkboxes and nothing else an input can be
 	p.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
 	p.AllowAttrs("checked", "disabled").OnElements("input")
