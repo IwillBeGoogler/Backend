@@ -155,7 +155,7 @@ func (p scriptParser) Parse(_ ast.Node, block text.Reader, pc parser.Context) as
 	if len(line) == 0 || (len(line) > 1 && line[1] == p.char) || before == rune(p.char) {
 		return nil // ~~strike~~ (or ^^) is left to the other parsers
 	}
-	node := parser.ScanDelimiter(line, before, 1, scriptDelimiters{char: p.char})
+	node := parser.ScanDelimiter(line, before, 1, scriptDelimiters(p))
 	if node == nil || node.OriginalLength != 1 {
 		return nil
 	}
