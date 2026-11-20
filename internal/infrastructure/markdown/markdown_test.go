@@ -278,3 +278,23 @@ func TestRenderHighlightAndAlerts(t *testing.T) {
 		t.Errorf("marker left in: %q", got)
 	}
 }
+
+func TestRenderSupSub(t *testing.T) {
+	r := New()
+	cases := []struct{ name, in, want string }{
+		{"sup", "O(n^2^)", "O(n<sup>2</sup>)"},
+		{"sup words", "n^log n^", "n<sup>log n</sup>"},
+		{"sub", "H~2~O", "H<sub>2</sub>O"},
+		{"strike kept", "a ~~b~~ c", "<del>b</del>"},
+		{"spaced caret", "a ^ b ^ c", "a ^ b ^ c"},
+		{"spaced tilde", "a ~ b ~ c", "a ~ b ~ c"},
+		{"lone caret", "2^10 bytes", "2^10 bytes"},
+		{"in code", "`n^2^`", "<code>n^2^</code>"},
+		{"both", "x~i~ + y^2^", "x<sub>i</sub> + y<sup>2</sup>"},
+	}
+	for _, c := range cases {
+		if got := r.Render(c.in); !strings.Contains(got, c.want) {
+			t.Errorf("%s: Render(%q) = %q, want it to contain %q", c.name, c.in, got, c.want)
+		}
+	}
+}

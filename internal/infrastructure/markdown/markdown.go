@@ -62,7 +62,7 @@ func HasDiagramEmbed(body string) bool { return strings.Contains(body, "::diagra
 
 func New() *Renderer {
 	md := goldmark.New(
-		goldmark.WithExtensions(extension.GFM, extension.Footnote, extension.DefinitionList, highlight{}),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote, extension.DefinitionList, highlight{}, scripts{}),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(util.Prioritized(codeTabsTransformer{}, 500), util.Prioritized(alertTransformer{}, 600)),
