@@ -47,27 +47,27 @@ func (r *SocialRepo) FollowedTags(ctx context.Context, userID int) ([]string, er
 
 const notificationCols = `n.id, n.user_id, n.type, COALESCE(n.actor_id, 0), COALESCE(a.username, ''),
 	COALESCE(n.post_id, 0), COALESCE(n.comment_id, 0), COALESCE(n.dg_project_id, ''), COALESCE(n.dg_file_id, ''),
-	COALESCE(n.dg_comment_id, ''), COALESCE(n.text, ''), n.read_at, n.created_at`
+	COALESCE(n.dg_comment_id, ''), COALESCE(n.text, ''), COALESCE(n.challenge_id, 0), n.read_at, n.created_at`
 
 func scanNotification(row pgx.Row) (social.Notification, error) {
 	var s social.Notification
 	err := row.Scan(&s.ID, &s.UserID, &s.Type, &s.ActorID, &s.Actor, &s.PostID, &s.CommentID,
-		&s.DiagramProjectID, &s.DiagramFileID, &s.DiagramCommentID, &s.Text, &s.ReadAt, &s.CreatedAt)
+		&s.DiagramProjectID, &s.DiagramFileID, &s.DiagramCommentID, &s.Text, &s.ChallengeID, &s.ReadAt, &s.CreatedAt)
 	return s, err
 }
 
 func (r *SocialRepo) Notify(ctx context.Context, n social.Notification, recipients []int) ([]social.Notification, error) {
 	rows, err := r.db.Query(ctx, `WITH ins AS (
-			INSERT INTO notifications (user_id, type, actor_id, post_id, comment_id, dg_project_id, dg_file_id, dg_comment_id, text)
+			INSERT INTO notifications (user_id, type, actor_id, post_id, comment_id, dg_project_id, dg_file_id, dg_comment_id, text, challenge_id)
 			SELECT unnest($1::int[]), $2, NULLIF($3, 0), NULLIF($4, 0), NULLIF($5, 0),
-				NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, '')
+				NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, 0)
 			-- notifications_new_post_dedupe_idx: a retried new_post fanout
 			-- inserts nothing twice; other types never conflict.
 			ON CONFLICT (user_id, type, post_id, actor_id) WHERE type = 'new_post' DO NOTHING
 			RETURNING *
 		)
 		SELECT `+notificationCols+` FROM ins n LEFT JOIN users a ON a.id = n.actor_id`,
-		recipients, n.Type, n.ActorID, n.PostID, n.CommentID, n.DiagramProjectID, n.DiagramFileID, n.DiagramCommentID, n.Text)
+		recipients, n.Type, n.ActorID, n.PostID, n.CommentID, n.DiagramProjectID, n.DiagramFileID, n.DiagramCommentID, n.Text, n.ChallengeID)
 	if err != nil {
 		return nil, err
 	}

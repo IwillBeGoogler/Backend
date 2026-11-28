@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/textproto"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/telegram"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/user"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/images"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/telemetry"
@@ -38,6 +40,10 @@ const (
 	TypeWebhook      = "diagram:webhook"
 	TypeDiagramThumb = "diagram:thumbnail"
 	TypeSweep        = "sweep" // periodic: overdue publishing, purges, expired suspensions
+	// TypeTelegram sends one notification to a linked Telegram chat.
+	TypeTelegram = "telegram:send"
+	// TypeChallengeTick sends due challenge reminders (periodic).
+	TypeChallengeTick = "challenge:tick"
 )
 
 type idPayload struct {
@@ -166,11 +172,47 @@ func (c *Client) DeliverWebhookAt(ctx context.Context, deliveryID string, attemp
 		asynq.MaxRetry(5), asynq.Timeout(time.Minute), asynq.Retention(time.Hour))
 }
 
+// SendTelegram implements application.TelegramQueue. The task is kept for a
+// day so one notification is queued once.
+func (c *Client) SendTelegram(ctx context.Context, m application.TelegramMessage) error {
+	return c.enqueue(ctx, TypeTelegram, m, asynq.TaskID("tg:"+strconv.FormatInt(m.NotificationID, 10)),
+		asynq.MaxRetry(8), asynq.Timeout(time.Minute), asynq.Retention(24*time.Hour))
+}
+
+// telegramTask delivers a message; refusals that cannot change are not retried.
+func telegramTask(deliver func(context.Context, application.TelegramMessage) error) asynq.HandlerFunc {
+	return func(ctx context.Context, t *asynq.Task) error {
+		var m application.TelegramMessage
+		if err := json.Unmarshal(t.Payload(), &m); err != nil {
+			return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
+		}
+		err := deliver(ctx, m)
+		var te *telegram.Error
+		if errors.As(err, &te) && te.Permanent() {
+			return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
+		}
+		return err
+	}
+}
+
+// retryDelay waits as long as Telegram asks after a 429.
+func retryDelay(n int, err error, t *asynq.Task) time.Duration {
+	var te *telegram.Error
+	if errors.As(err, &te) && te.RetryAfter > 0 {
+		return te.RetryAfter + time.Second
+	}
+	return asynq.DefaultRetryDelayFunc(n, err, t)
+}
+
 // Worker processes tasks and runs the periodic sweep.
 type Worker struct {
 	srv   *asynq.Server
 	sched *asynq.Scheduler
 	mux   *asynq.ServeMux
+
+	tg   *application.Telegram
+	stop context.CancelFunc // ends tg.Receive
+	done sync.WaitGroup
 }
 
 // Handlers are the application services the worker calls.
@@ -187,6 +229,8 @@ type Handlers struct {
 	Hooks *application.WebhookDispatcher
 	// Diagrams draws missing file previews (nil: the task is not handled).
 	Diagrams *application.Diagrams
+	// Telegram sends bot messages and receives updates (nil: disabled).
+	Telegram *application.Telegram
 	// InvalidateCache drops cached HTTP responses after a job changed public
 	// data (nil: middleware.ResetCache on the worker's Redis).
 	InvalidateCache func(context.Context) error
@@ -194,6 +238,9 @@ type Handlers struct {
 
 // SweepEvery is how often overdue publishing and purges are retried.
 const SweepEvery = "@every 1m"
+
+// ChallengeTickEvery is how often challenge reminders are checked.
+const ChallengeTickEvery = "@every 5m"
 
 func NewWorker(rdb *redis.Client, h Handlers) *Worker {
 	if h.InvalidateCache == nil {
@@ -226,6 +273,14 @@ func NewWorker(rdb *redis.Client, h Handlers) *Worker {
 	if h.Diagrams != nil {
 		mux.HandleFunc(TypeDiagramThumb, diagramThumbTask(h.Diagrams))
 	}
+	if h.Telegram != nil {
+		mux.HandleFunc(TypeTelegram, telegramTask(h.Telegram.Deliver))
+	} else { // switched off with messages still queued: drop them
+		mux.HandleFunc(TypeTelegram, func(context.Context, *asynq.Task) error { return nil })
+	}
+	mux.HandleFunc(TypeChallengeTick, func(ctx context.Context, _ *asynq.Task) error {
+		return h.Blog.ChallengeReminders(ctx)
+	})
 	mux.HandleFunc(TypeSweep, func(ctx context.Context, _ *asynq.Task) error {
 		// The sweep runs every minute; invalidate only when it had work,
 		// otherwise the response cache would never outlive a minute.
@@ -238,28 +293,48 @@ func NewWorker(rdb *redis.Client, h Handlers) *Worker {
 	})
 
 	srv := asynq.NewServerFromRedisClient(rdb, asynq.Config{
-		Concurrency: 5,
-		Logger:      zapLogger{},
+		Concurrency:    5,
+		Logger:         zapLogger{},
+		RetryDelayFunc: retryDelay,
 		ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, t *asynq.Task, err error) {
 			zap.L().Error("job failed", zap.Any("ctx", ctx), zap.Any("type", t.Type()), zap.Error(err))
 		}),
 	})
 	sched := asynq.NewSchedulerFromRedisClient(rdb, &asynq.SchedulerOpts{Logger: zapLogger{}})
-	return &Worker{srv: srv, sched: sched, mux: mux}
+	return &Worker{srv: srv, sched: sched, mux: mux, tg: h.Telegram}
 }
 
 func (w *Worker) Start() error {
 	if _, err := w.sched.Register(SweepEvery, asynq.NewTask(TypeSweep, nil), asynq.Unique(time.Minute)); err != nil {
 		return err
 	}
+	if _, err := w.sched.Register(ChallengeTickEvery, asynq.NewTask(TypeChallengeTick, nil), asynq.Unique(5*time.Minute)); err != nil {
+		return err
+	}
 	if err := w.sched.Start(); err != nil {
 		return err
 	}
-	return w.srv.Start(w.mux)
+	if err := w.srv.Start(w.mux); err != nil {
+		return err
+	}
+	if w.tg != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		w.stop = cancel
+		w.done.Add(1)
+		go func() {
+			defer w.done.Done()
+			w.tg.Receive(ctx)
+		}()
+	}
+	return nil
 }
 
 // Stop waits for running tasks to finish.
 func (w *Worker) Stop() {
+	if w.stop != nil {
+		w.stop()
+		w.done.Wait()
+	}
 	w.sched.Shutdown()
 	w.srv.Shutdown()
 }

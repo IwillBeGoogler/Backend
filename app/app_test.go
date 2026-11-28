@@ -33,6 +33,7 @@ import (
 type env struct {
 	srv *httptest.Server
 	app *app.App
+	dsn string // for tests that must move rows back in time
 }
 
 // start runs the app against fresh containers; opts adjust the config.
@@ -103,7 +104,7 @@ func start(t *testing.T, opts ...func(*config.Config)) *env {
 	t.Cleanup(a.Close)
 	srv := httptest.NewServer(a.Handler)
 	t.Cleanup(srv.Close)
-	return &env{srv: srv, app: a}
+	return &env{srv: srv, app: a, dsn: dsn}
 }
 
 func must(t *testing.T, err error) {

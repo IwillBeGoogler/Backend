@@ -7,6 +7,7 @@ package core
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/config"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/application"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/guardauth"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/importer"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/mail"
@@ -28,6 +30,7 @@ import (
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/secretbox"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/storage"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/svgsafe"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/telegram"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/infrastructure/webhooks"
 )
 
@@ -51,6 +54,7 @@ type Services struct {
 	Analytics *application.Analytics // nil unless cfg.Analytics
 	SiteStats *application.SiteStats
 	Insights  *application.Insights
+	Telegram  *application.Telegram // nil unless the bot is configured
 
 	close []func()
 }
@@ -64,7 +68,7 @@ func (s *Services) Close() {
 
 // Handlers is what the background worker needs.
 func (s *Services) Handlers() queue.Handlers {
-	h := queue.Handlers{Blog: s.Blog, Accounts: s.Accounts, Mailer: s.Mailer, Storage: s.Storage, Analytics: s.Analytics}
+	h := queue.Handlers{Blog: s.Blog, Accounts: s.Accounts, Mailer: s.Mailer, Storage: s.Storage, Analytics: s.Analytics, Telegram: s.Telegram}
 	if s.Diagrams != nil {
 		h.Hooks = s.Diagrams.Hooks
 		h.Diagrams = s.Diagrams
@@ -170,6 +174,7 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 		Series:       postgres.NewSeriesRepo(db),
 		Discovery:    postgres.NewDiscoveryRepo(db),
 		Lists:        postgres.NewListRepo(db),
+		Challenges:   postgres.NewChallengeRepo(db),
 	}, application.Ports{
 		Authz:    guardauth.Authorizer{G: g},
 		Audit:    guardauth.Auditor{G: g},
@@ -256,6 +261,30 @@ func New(ctx context.Context, cfg config.Config) (_ *Services, err error) {
 	s.SiteStats = application.NewSiteStats(postgres.NewSiteStatsRepo(db), redis.Views{RDB: rdb}, s.Diagrams.Views, guardauth.Authorizer{G: g})
 	s.Insights = application.NewInsights(postgres.NewInsightsRepo(db), guardauth.Authorizer{G: g})
 	s.Diagrams.Notices = blog // comment notifications ride the blog's notification system and its live stream
+
+	if cfg.TelegramEnabled() {
+		active := guardauth.UserActive(g)
+		s.Telegram = &application.Telegram{
+			Links:      postgres.NewTelegramRepo(db),
+			Tokens:     redis.TelegramTokens{ResetTokens: redis.ResetTokens{RDB: rdb, Prefix: "tglink"}},
+			Bot:        telegram.New(cfg.TelegramBotToken, cfg.TelegramAPIURL),
+			Challenges: blog.Challenges,
+			Queue:      jobs,
+			ActiveUser: func(ctx context.Context, id int) (string, bool, error) {
+				u, err := accounts.User(ctx, id)
+				if errors.Is(err, domain.ErrUnauthorized) { // gone or deleted
+					return "", false, nil
+				}
+				if err != nil {
+					return "", false, err
+				}
+				return u.Username, active(ctx, id), nil
+			},
+			BotUsername: cfg.TelegramBotUsername, SiteURL: cfg.SiteURL, SiteName: cfg.SiteName,
+			Mode: cfg.TelegramMode, WebhookSecret: cfg.TelegramWebhookSecret,
+		}
+		blog.Telegram = s.Telegram
+	}
 
 	if cfg.Analytics {
 		s.Analytics = application.NewAnalytics(postgres.NewAnalyticsRepo(db), guardauth.Authorizer{G: g})

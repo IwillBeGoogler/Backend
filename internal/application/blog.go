@@ -10,6 +10,7 @@ import (
 
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/category"
+	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/challenge"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/clienterror"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/comment"
 	"github.com/IWillBeGoogler/iwillbegoogler-monolith-go/internal/domain/feedback"
@@ -54,11 +55,12 @@ type Repos struct {
 	Publications publication.Repository
 	Stats        StatsReader
 	// Optional: blocks/mutes, revisions, series and recommendations.
-	Relations relation.Repository
-	Revisions revision.Repository
-	Series    series.Repository
-	Discovery Discovery
-	Lists     readinglist.Repository
+	Relations  relation.Repository
+	Revisions  revision.Repository
+	Series     series.Repository
+	Discovery  Discovery
+	Lists      readinglist.Repository
+	Challenges challenge.Repository
 }
 
 // Ports groups the side-effect ports Blog needs.
@@ -74,6 +76,8 @@ type Ports struct {
 	Importer Importer
 	// Diagrams serves reports on diagram files (optional).
 	Diagrams DiagramModeration
+	// Telegram forwards challenge notifications to linked chats (optional).
+	Telegram NotificationForwarder
 }
 
 type Blog struct {
@@ -361,6 +365,7 @@ func (b *Blog) FanoutNewPost(ctx context.Context, id int) error {
 	if err != nil || !p.IsPublic() || p.UserID == 0 {
 		return ignoreNotFound(err)
 	}
+	b.challengeDayRecorded(ctx, id) // send-once, so a retry repeats nothing
 	followers, err := b.Users.FollowerIDs(ctx, p.UserID)
 	if err != nil {
 		return err
@@ -864,6 +869,9 @@ func (b *Blog) notify(ctx context.Context, n social.Notification, recipients ...
 		if err := b.Events.Publish(ctx, NotificationsChannel(s.UserID), s); err != nil {
 			zap.L().Warn("push notification", zap.Any("ctx", ctx), zap.Error(err))
 		}
+	}
+	if b.Telegram != nil {
+		b.Telegram.Forward(ctx, sent)
 	}
 	return nil
 }

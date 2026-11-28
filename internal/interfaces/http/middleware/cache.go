@@ -156,7 +156,7 @@ func sessionOnly(path string) bool {
 var sessionOnlyPrefixes = []string{
 	"/api/auth/", "/api/guard/", "/api/diagrams/",
 	"/api/events", "/api/internal/", "/api/client-errors", "/api/feedback",
-	"/api/reports", "/api/unsubscribe",
+	"/api/reports", "/api/unsubscribe", "/api/telegram/", "/api/me/telegram",
 	"/api/me/stream-ticket", "/api/me/notifications/read", "/api/me/hidden",
 }
 
@@ -175,7 +175,7 @@ func cacheKeyURI(r *http.Request) string {
 // key. Add new parameters here when a handler starts reading one.
 var cacheQueryParams = map[string]bool{
 	"category": true, "cursor": true, "days": true, "label": true, "lang": true, "limit": true,
-	"page": true, "post_id": true, "q": true, "status": true, "tag": true,
+	"page": true, "post_id": true, "q": true, "status": true, "tab": true, "tag": true,
 }
 
 func knownQuery(r *http.Request) bool {
