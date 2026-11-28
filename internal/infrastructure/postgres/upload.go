@@ -43,7 +43,7 @@ WITH due AS (
         OR EXISTS (SELECT 1 FROM comments WHERE position(d.key in text) > 0)
         OR EXISTS (SELECT 1 FROM users WHERE position(d.key in avatar_url) > 0 OR position(d.key in bio) > 0)
         OR EXISTS (SELECT 1 FROM publications WHERE position(d.key in avatar_url) > 0 OR position(d.key in description) > 0)
-        OR EXISTS (SELECT 1 FROM series WHERE position(d.key in description) > 0)
+        OR EXISTS (SELECT 1 FROM series WHERE position(d.key in description) > 0 OR position(d.key in cover_url) > 0)
         OR EXISTS (SELECT 1 FROM lists WHERE position(d.key in description) > 0)
     ) AS unused
     FROM due d
