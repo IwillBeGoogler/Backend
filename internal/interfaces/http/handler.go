@@ -76,6 +76,8 @@ type Deps struct {
 	MCPRatePerMinute int
 	// Schema serves POST /api/diagrams/schema/introspect (nil disables it).
 	Schema diagram.SchemaIntrospector
+	// Telegram serves /api/me/telegram and the bot webhook (nil: disabled).
+	Telegram *application.Telegram
 	// Social serves /api/auth/oauth/{provider}/* for the enabled providers
 	// ("google", "github").
 	Social map[string]SocialProvider
@@ -128,6 +130,27 @@ func (h *Handler) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/series/{slug}", h.updateSeries)
 	mux.HandleFunc("DELETE /api/series/{slug}", h.deleteSeries)
 	mux.HandleFunc("PUT /api/series/{slug}/posts", h.setSeriesPosts)
+
+	mux.HandleFunc("GET /api/challenges", h.listChallenges)
+	mux.HandleFunc("POST /api/challenges", h.createChallenge)
+	mux.HandleFunc("GET /api/challenges/{id}", h.getChallenge)
+	mux.HandleFunc("PATCH /api/challenges/{id}", h.updateChallenge)
+	mux.HandleFunc("DELETE /api/challenges/{id}", h.deleteChallenge)
+	mux.HandleFunc("POST /api/challenges/{id}/follow", h.followChallenge)
+	mux.HandleFunc("DELETE /api/challenges/{id}/follow", h.unfollowChallenge)
+	mux.HandleFunc("POST /api/challenges/{id}/cheer", h.cheerChallenge)
+	mux.HandleFunc("PUT /api/challenges/{id}/posts/{postId}", h.linkChallengePost)
+	mux.HandleFunc("DELETE /api/challenges/{id}/posts/{postId}", h.unlinkChallengePost)
+	mux.HandleFunc("GET /api/posts/{id}/challenge", h.postChallenge)
+	mux.HandleFunc("GET /api/me/challenges", h.myRunningChallenges)
+	mux.HandleFunc("GET /api/me/telegram", h.telegramStatus)
+	mux.HandleFunc("POST /api/me/telegram/link", h.telegramLink)
+	mux.HandleFunc("DELETE /api/me/telegram", h.telegramUnlink)
+	mux.HandleFunc("POST "+application.TelegramWebhookPath, h.telegramWebhook)
+	mux.HandleFunc("POST /api/challenges/{id}/certificate", h.claimCertificate)
+	mux.HandleFunc("GET /api/certificates/{id}", h.getCertificate)
+	mux.HandleFunc("GET /api/admin/certificates", h.adminCertificates)
+	mux.HandleFunc("POST /api/admin/certificates/{id}/revoke", h.revokeCertificate)
 
 	mux.HandleFunc("POST /api/lists", h.createList)
 	mux.HandleFunc("GET /api/lists/{slug}", h.getList)

@@ -27,6 +27,16 @@ const (
 	NotifyDiagramClap    NotificationType = "diagram_clap"    // someone clapped for your published diagram
 )
 
+// Challenge notifications carry the challenge id; Text is their parameter:
+// the day number, the milestone, or a message variant such as "evening.2".
+// An empty actor means the message is about the recipient's own challenge.
+const (
+	NotifyChallengeDay       NotificationType = "challenge_day"       // a followed challenge got its day
+	NotifyChallengeMilestone NotificationType = "challenge_milestone" // a challenge reached a milestone
+	NotifyChallengePraise    NotificationType = "challenge_praise"    // you wrote today's post
+	NotifyChallengeNudge     NotificationType = "challenge_nudge"     // reminder to write
+)
+
 // Diagram reports whether t is one of the diagram notification types.
 func (t NotificationType) Diagram() bool {
 	return t == NotifyDiagramMention || t == NotifyDiagramReply || t == NotifyDiagramComment || t == NotifyDiagramClap
@@ -42,6 +52,7 @@ type Notification struct {
 	CommentID int              `json:"comment_id"`
 	// Diagram notifications refer to a diagram project, file and comment
 	// (ids are text) and carry the sentence to show; empty for the others.
+	ChallengeID      int        `json:"challenge_id,omitempty"`
 	DiagramProjectID string     `json:"diagram_project_id,omitempty"`
 	DiagramFileID    string     `json:"diagram_file_id,omitempty"`
 	DiagramCommentID string     `json:"diagram_comment_id,omitempty"`

@@ -173,6 +173,15 @@ type Config struct {
 	GitHubTokenURL string `env:"GITHUB_TOKEN_URL" default:"https://github.com/login/oauth/access_token" desc:"GitHub token URL (tests only)"`
 	GitHubAPIURL   string `env:"GITHUB_API_URL" default:"https://api.github.com" desc:"GitHub API base URL (tests only)"`
 
+	// Telegram bot that links accounts and sends challenge notifications. It is
+	// off without a token or with TELEGRAM_MAIN_MODE=off. (Separate from the
+	// TELEGRAM_BOT_TOKEN of monitoring alerts.)
+	TelegramBotToken      string `env:"TELEGRAM_MAIN_BOT_TOKEN,secret" desc:"token of the app's Telegram bot; empty disables it"`
+	TelegramBotUsername   string `env:"TELEGRAM_MAIN_BOT_USERNAME" default:"iwillbegooglerbot" desc:"the bot's username, without @"`
+	TelegramMode          string `env:"TELEGRAM_MAIN_MODE" default:"off" desc:"off, poll (the worker long-polls; one instance) or webhook (SITE_URL/api/telegram/webhook)"`
+	TelegramWebhookSecret string `env:"TELEGRAM_MAIN_WEBHOOK_SECRET,secret" desc:"webhook mode: secret Telegram sends with each update (>= 32 chars in production; A-Z a-z 0-9 _ -)"`
+	TelegramAPIURL        string `env:"TELEGRAM_MAIN_API_URL" desc:"Bot API base URL override (tests only)"`
+
 	// Spector API console (/api/docs/), generated from this repo's source.
 	DocsDir        string `env:"DOCS_DIR" default:"." desc:"source directory Spector scans"`
 	DocsKey        string `env:"DOCS_KEY,secret" desc:"access key for the console; empty disables the console"`
@@ -230,6 +239,18 @@ func (c *Config) Validate() error {
 	c.RateLimitMultiplier = max(c.RateLimitMultiplier, 1)
 	if _, err := c.ICE(); err != nil {
 		return err
+	}
+	switch c.TelegramMode {
+	case "", "off", "poll":
+	case "webhook":
+		if c.TelegramBotToken != "" && (!webhookSecret.MatchString(c.TelegramWebhookSecret) || (!c.Dev() && len(c.TelegramWebhookSecret) < 32)) {
+			return errors.New("config: TELEGRAM_MAIN_WEBHOOK_SECRET must be 32-256 characters of A-Z a-z 0-9 _ - for TELEGRAM_MAIN_MODE=webhook")
+		}
+	default:
+		return fmt.Errorf("config: TELEGRAM_MAIN_MODE must be off, poll or webhook, got %q", c.TelegramMode)
+	}
+	if c.TelegramEnabled() && !botUsername.MatchString(c.TelegramBotUsername) {
+		return errors.New("config: TELEGRAM_MAIN_BOT_USERNAME must be the bot's username without @")
 	}
 	if c.Dev() {
 		if c.MFAKey == "" {
@@ -308,6 +329,16 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("config (APP_ENV=production; use APP_ENV=dev locally): %w", errors.Join(errs...))
 	}
 	return nil
+}
+
+var (
+	webhookSecret = regexp.MustCompile(`^[A-Za-z0-9_-]{1,256}$`)
+	botUsername   = regexp.MustCompile(`^[A-Za-z0-9_]{3,32}$`)
+)
+
+// TelegramEnabled reports whether the app's Telegram bot is on.
+func (c Config) TelegramEnabled() bool {
+	return c.TelegramBotToken != "" && (c.TelegramMode == "poll" || c.TelegramMode == "webhook")
 }
 
 // MeshMaxPeers is the most people a WebRTC mesh audio room can hold.

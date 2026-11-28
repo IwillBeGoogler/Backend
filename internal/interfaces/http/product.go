@@ -335,6 +335,10 @@ func publicSection(path string) (string, bool) {
 		if rest == "gallery" || strings.HasPrefix(rest, "v/") {
 			return "Diagrams", true
 		}
+	case "certificates":
+		if rest != "" {
+			return "Certificates", true
+		}
 	case "series":
 		return "Series", true
 	case "pub":

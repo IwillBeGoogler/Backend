@@ -46,6 +46,8 @@ type App struct {
 	Metrics http.Handler
 	// Outbox holds sent mail when SMTP is not configured (dev, tests).
 	Outbox *mail.Memory
+	// Blog is the application service, for running periodic jobs on demand.
+	Blog *application.Blog
 
 	worker *queue.Worker
 	close  []func()
@@ -85,6 +87,7 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 	}
 	a.close = append(a.close, s.Close)
 	a.Outbox = s.Outbox
+	a.Blog = s.Blog
 	db, rdb, g, st, jobs := s.DB, s.RDB, s.Guard, s.Storage, s.Jobs
 	if err := middleware.ResetCache(ctx, rdb); err != nil {
 		return nil, err
@@ -251,7 +254,8 @@ func New(ctx context.Context, cfg config.Config) (_ *App, err error) {
 		GTMContainerID: cfg.GTMContainerID,
 		SiteName:       cfg.SiteName,
 
-		Social: social,
+		Social:   social,
+		Telegram: s.Telegram,
 	}).Routes(api)
 	// Guard's own API: sessions, API keys, roles, permissions, ABAC policies,
 	// user status (ban), audit log.
