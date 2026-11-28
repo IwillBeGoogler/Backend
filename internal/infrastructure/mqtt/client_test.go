@@ -116,6 +116,14 @@ func TestClientAgainstBroker(t *testing.T) {
 	b.lastConn().Close()
 	waitFor(t, "reconnect after socket drop", func() bool { b.mu.Lock(); defer b.mu.Unlock(); return b.connectCount > before })
 	waitFor(t, "resubscribe after socket drop", func() bool { b.mu.Lock(); defer b.mu.Unlock(); return len(b.subs) >= 2 })
+	// The broker having the SUBSCRIBE is not enough: kicking before the client
+	// has read the SUBACK leaves it retrying on the dead connection, which holds
+	// the reconnect past the deadline. The broker answers in order, so a PUBACK
+	// means the SUBACK arrived.
+	b.mu.Lock()
+	b.noPubAck, b.pubReason = false, 0
+	b.mu.Unlock()
+	waitFor(t, "suback read", func() bool { return c.Publish(ctx, application.Message{Topic: "t", QoS: 1}) == nil })
 
 	// Server disconnect: the client reconnects and subscribes again.
 	b.kick(0x8B)
